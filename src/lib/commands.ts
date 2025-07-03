@@ -5,12 +5,13 @@ export const textCommands: Map<string, string> = new Map([
 		"help",
 		`Available commands:
 		help - Show this help message
-		clear - Clear the terminal
+		name - Show my name in ASCII art
 		about - Learn about me
 		projects - List my projects
-		name - Show my name in ASCII art
 		color <color> - Change the color of the text:
 		colors - List available colors
+		clear - Clear the terminal
+		date - Show the current date and time
 		`,
 	],
 	[
@@ -18,6 +19,7 @@ export const textCommands: Map<string, string> = new Map([
 		`My name is Liam, I am a software developer with a passion for creating web applications.
 		I have experience in JavaScript, TypeScript, Svelte, and many more languages.
 		I enjoy building projects that solve real-world problems and improve user experiences.
+		I love Star Wars, Chess, and the Gym.
 		You can find more about me and my projects on my GitHub profile:link:https://github.com/liamg2810`,
 	],
 	[
@@ -28,11 +30,18 @@ export const textCommands: Map<string, string> = new Map([
 		"colors",
 		`Available colors:
 		0 - White
-		1 - Red
+		1 - Blue
 		2 - Green
-		3 - Blue
-		4 - Yellow
-		5 - Pink`,
+		3 - Aqua
+		4 - Red
+		5 - Purple
+		6 - Yellow
+		7 - Gray
+		8 - Pink
+		9 - Orange
+		10 - Brown
+		11 - Black
+		12 - Light Green`,
 	],
 	["clear", "Terminal cleared."],
 	[
@@ -61,6 +70,28 @@ export const textCommands: Map<string, string> = new Map([
 		* .\`8.8888........8'....8'...\`8..\`88888....8.8888.\`8b......8.8888........,88'.8......\`Y8o..\`Y8.8.8888.........8.8888.\`8b.....
 		* ....8888.....,88'....888888888..\`88888...8.8888...\`8b....8.8888....,o88P'...8.........\`Y8o.\`.8.8888.........8.8888...\`8b...
 		* .....\`8888888P'.....8'.......\`8..\`88888..8.8888.....\`88..8.888888888P'......8............\`Yo.8.888888888888.8.8888.....\`88.
+		*/
+		`,
+	],
+	// Easter eggs
+	[
+		"easteregg",
+		"You found an easter egg! There are currently 3 commands that are easter eggs, including this one. Can you find them all?",
+	],
+	["sudo", "Permission denied: you're not root... or are you?"],
+	["highground", "You underestimate my power!"],
+	[
+		"chess",
+		`
+		/**
+		 *[♖][♘][♗][♕][♔][♗][♘][♖]
+		 *[♙][♙][♙][♙][♙][♙][♙][♙]
+		 *[▮][  ][▮][  ][▮][  ][▮][  ]
+		 *[  ][▮][  ][▮][  ][▮][  ][▮]
+		 *[▮][  ][▮][  ][▮][  ][▮][  ]
+		 *[  ][▮][  ][▮][  ][▮][  ][▮]
+		 *[♟][♟][♟][♟][♟][♟][♟][♟]
+		 *[♜][♞][♝][♛][♚][♝][♞][♜]
 		*/
 		`,
 	],

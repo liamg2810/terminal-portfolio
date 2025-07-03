@@ -6,21 +6,35 @@
 	let lines: { type: "input" | "response"; value: string }[] = $state([]);
 
 	const availableColors: string[] = [
-		"neutral-100",
-		"red-500",
-		"green-500",
-		"blue-500",
-		"yellow-500",
-		"pink-500",
+		"neutral-100", // 0 - White
+		"blue-500", // 1 - Blue
+		"green-500", // 2 - Green
+		"cyan-400", // 3 - Aqua
+		"red-500", // 4 - Red
+		"purple-500", // 5 - Purple
+		"yellow-500", // 6 - Yellow
+		"gray-500", // 7 - Gray
+		"pink-400", // 8 - Pink
+		"orange-500", // 9 - Orange
+		"amber-900", // 10 - Brown
+		"black", // 11 - Black
+		"green-300", // 12 - Light Green
 	];
 
 	const colorAlias: string[] = [
 		"white",
-		"red",
-		"green",
 		"blue",
+		"green",
+		"aqua",
+		"red",
+		"purple",
 		"yellow",
+		"gray",
 		"pink",
+		"orange",
+		"brown",
+		"black",
+		"light green",
 	];
 
 	let currentColor: string = $state("neutral-100"); // Default color
@@ -35,6 +49,7 @@
 	function HandleCommand(c: string) {
 		const command = c.trim().split(" ")[0];
 		const options = c.trim().split(" ").slice(1);
+		// Use the mapping to get the command or fallback to the trimmed command
 		const cmd = textCommands.get(command);
 
 		if (command === "clear") {
@@ -75,6 +90,11 @@
 					value: "No color specified. See `colors` for a list of available colors.",
 				});
 			}
+		} else if (command === "date") {
+			lines.push({
+				type: "response",
+				value: `Current date and time: ${new Date().toLocaleString()}`,
+			});
 		} else if (cmd) {
 			lines.push({
 				type: "response",
