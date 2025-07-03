@@ -14,6 +14,5 @@
 		padding: 0;
 		font-family: "Ubuntu Mono", monospace;
 		background-color: #1e1e1e; /* Dark background for terminal */
-		color: #ffffff; /* Light text color for contrast */
 	}
 </style>
