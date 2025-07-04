@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { parseCommand } from "$lib/commands/command";
 	import { RegisterAllCommands } from "$lib/commands/commands";
-	import { addLine, HaltScript } from "$lib/commands/scripting";
+	import { addLine, HaltScript } from "$lib/scripting/scripting";
 	import { terminalState } from "$lib/terminal/terminal.svelte";
 	import { onMount, tick } from "svelte";
 
@@ -40,11 +40,6 @@
 		if (blockInput) {
 			event.preventDefault();
 			return;
-		}
-
-		if (event.key === "Escape") {
-			event.preventDefault();
-			HaltScript();
 		}
 
 		if (event.key === "Enter") {
@@ -100,6 +95,13 @@
 		const startupMessage = `Welcome to my portfolio! Type 'help' for a list of commands.`;
 
 		AnimateSendMessage(startupMessage);
+
+		document.addEventListener("keydown", (event) => {
+			if (event.key === "Escape") {
+				HaltScript();
+				textareaRef.focus();
+			}
+		});
 	});
 </script>
 

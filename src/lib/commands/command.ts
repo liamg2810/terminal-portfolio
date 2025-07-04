@@ -1,8 +1,8 @@
-import { addLine } from "./scripting";
+import { addLine } from "../scripting/scripting";
 
 export type TExecute = (args: string[]) => void;
 
-let commands: Map<string, Command> = new Map();
+export let commands: Map<string, Command> = new Map();
 
 export class Command {
 	execute: TExecute;
