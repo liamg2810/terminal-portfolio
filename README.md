@@ -15,6 +15,7 @@ A unique, interactive terminal-style portfolio website built with SvelteKit. Exp
 
 -   `help` - Display all available commands
 -   `about` - Learn about me and my background
+-   `name` - Display my name in ASCII art
 -   `projects` - View my development projects
 -   `clear` - Clear the terminal screen
 -   `date` - Show current date and time
