@@ -27,7 +27,7 @@ A unique, interactive terminal-style portfolio website built with SvelteKit. Exp
 
 ### Hidden Features
 
-The terminal includes some fun easter eggs and additional commands for those who like to explore. Try some common terminal commands and see what happens! 🥚
+The terminal includes some fun easter eggs and additional commands for those who like to explore. Try some common terminal commands and see what happens! Maybe start with `easteregg` 🥚
 
 ## 🛠️ Tech Stack
 
