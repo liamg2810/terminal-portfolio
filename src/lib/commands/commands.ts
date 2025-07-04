@@ -6,6 +6,7 @@ import { RegisterEasterEggs } from "./eastereggs";
 import { RegisterHelpCommand } from "./help";
 import { RegisterNameCommand } from "./name";
 import { RegisterProjectsCommand } from "./projects";
+import { registerRunScript } from "./scripting";
 
 export function RegisterAllCommands() {
 	RegisterHelpCommand();
@@ -16,4 +17,5 @@ export function RegisterAllCommands() {
 	RegisterColorsCommand();
 	RegisterDateCommand();
 	RegisterEasterEggs();
+	registerRunScript();
 }

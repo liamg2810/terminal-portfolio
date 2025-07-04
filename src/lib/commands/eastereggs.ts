@@ -148,6 +148,20 @@ function packageManagerCommand(args: string[]) {
 	);
 }
 
+function echoCommand(args: string[]) {
+	if (args.length === 0) {
+		terminalState.lines.push({
+			type: "response",
+			value: "Usage: echo <message>",
+		});
+		return;
+	}
+	terminalState.lines.push({
+		type: "response",
+		value: args.join(" "),
+	});
+}
+
 export function RegisterEasterEggs() {
 	const sudo = new Command(sudoCommand);
 	const rm = new Command(rmCommand);
@@ -155,6 +169,7 @@ export function RegisterEasterEggs() {
 	const highground = new Command(highgroundCommand);
 	const chess = new Command(chessCommand);
 	const packageManager = new Command(packageManagerCommand);
+	const echo = new Command(echoCommand);
 
 	const storedPackages = localStorage.getItem("installedPackages");
 	if (storedPackages) {
@@ -172,4 +187,5 @@ export function RegisterEasterEggs() {
 	registerCommand("pkg", packageManager);
 	registerCommand("yum", packageManager);
 	registerCommand("apt", packageManager);
+	registerCommand("echo", echo);
 }

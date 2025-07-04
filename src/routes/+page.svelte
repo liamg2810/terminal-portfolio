@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { parseCommand } from "$lib/commands/command";
 	import { RegisterAllCommands } from "$lib/commands/commands";
+	import { addLine } from "$lib/commands/scripting";
 	import {
 		availableColors,
 		changeColor,
@@ -15,6 +16,13 @@
 
 	function HandleCommand(c: string) {
 		const command = parseCommand(c);
+
+		console.log(c);
+		if (!isNaN(parseInt(c.split(" ")[0]))) {
+			console.log("Adding line with number:", c);
+			addLine(parseInt(c), c.split(" ").slice(1).join(" "));
+			return;
+		}
 
 		if (!command) {
 			terminalState.lines.push({
