@@ -1,16 +1,17 @@
 <script lang="ts">
 	import { parseCommand } from "$lib/commands/command";
 	import { RegisterAllCommands } from "$lib/commands/commands";
-	import { addLine } from "$lib/commands/scripting";
-	import {
-		availableColors,
-		changeColor,
-		colorAlias,
-		terminalState,
-	} from "$lib/terminal/terminal.svelte";
+	import { addLine, HaltScript } from "$lib/commands/scripting";
+	import { terminalState } from "$lib/terminal/terminal.svelte";
 	import { onMount, tick } from "svelte";
 
 	let textareaRef: HTMLTextAreaElement;
+
+	$effect(() => {
+		if (!terminalState.executingScript) {
+			textareaRef.focus();
+		}
+	});
 
 	let blockInput: boolean = $state(true); // To block input when needed
 
@@ -39,6 +40,11 @@
 		if (blockInput) {
 			event.preventDefault();
 			return;
+		}
+
+		if (event.key === "Escape") {
+			event.preventDefault();
+			HaltScript();
 		}
 
 		if (event.key === "Enter") {
@@ -133,13 +139,15 @@
 	{/each}
 
 	<div class="flex flex-1 w-full">
-		<span class="pt-2">>>></span>
+		{#if !terminalState.executingScript}
+			<span class="pt-2">>>></span>
+		{/if}
 		<textarea
 			onkeydown={handleKeyPress}
 			bind:value={terminalState.text}
 			class="resize-none bg-transparent border-none outline-none focus:ring-0 hover:cursor-default w-full"
 			bind:this={textareaRef}
-			disabled={blockInput}
+			disabled={blockInput || terminalState.executingScript}
 		></textarea>
 	</div>
 </button>

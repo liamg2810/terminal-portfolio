@@ -2,10 +2,12 @@ export let terminalState: {
 	text: string;
 	lines: { type: "input" | "response"; value: string }[];
 	color: string;
+	executingScript: boolean;
 } = $state({
 	text: "",
 	lines: [],
 	color: "neutral-100",
+	executingScript: false,
 });
 
 export const availableColors: string[] = [

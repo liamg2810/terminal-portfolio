@@ -3,7 +3,6 @@ import { Command, parseCommand, registerCommand } from "./command";
 
 let lines: Map<number, string> = new Map();
 
-let executingScript = false;
 let currentLine = 0;
 
 export function addLine(lineNumber: number, command: string) {
@@ -20,7 +19,11 @@ function orderLines() {
 	lines = new Map(Array.from(lines.entries()).sort((a, b) => a[0] - b[0]));
 }
 
-function runScript(args: string[]) {
+async function delay(ms: number) {
+	return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+async function runScript(args: string[]) {
 	const orderedLines: Map<number, string> = new Map(
 		Array.from(lines.entries()).sort((a, b) => a[0] - b[0])
 	);
@@ -31,19 +34,57 @@ function runScript(args: string[]) {
 			: 0;
 
 	currentLine = 0;
-	executingScript = true;
+	terminalState.executingScript = true;
 
-	while (currentLine <= largestLineNumber) {
+	while (currentLine <= largestLineNumber && terminalState.executingScript) {
+		const keys = Array.from(orderedLines.keys());
+		const largerKeys = keys.filter((k) => k > currentLine);
+		const nextLine =
+			largerKeys.length > 0
+				? Math.min(...largerKeys)
+				: largestLineNumber + 1;
+
 		if (!orderedLines.has(currentLine)) {
-			currentLine += 1;
+			currentLine = nextLine;
 			continue;
 		}
 
 		const command = orderedLines.get(currentLine);
 		if (command) {
+			if (command.trim() === "") {
+				currentLine = nextLine;
+				continue;
+			}
+
+			if (command.trim() === "run") {
+				terminalState.lines.push({
+					type: "response",
+					value: `Unable to run script: "run" command is not valid in this context. Line ${currentLine}`,
+				});
+				currentLine = nextLine;
+				continue;
+			}
+
 			if (command.trim().split(" ")[0] === "goto") {
 				const args = command.trim().split(" ").slice(1);
 				gotoLine(args);
+				continue;
+			}
+
+			if (command.trim().split(" ")[0] === "sleep") {
+				const args = command.trim().split(" ").slice(1);
+				if (args.length === 0 || isNaN(parseInt(args[0]))) {
+					terminalState.lines.push({
+						type: "response",
+						value: "Please provide a valid sleep duration in milliseconds.",
+					});
+					currentLine = nextLine;
+					continue;
+				}
+
+				const sleepDuration = parseInt(args[0]);
+				await delay(sleepDuration);
+				currentLine = nextLine;
 				continue;
 			}
 
@@ -60,10 +101,28 @@ function runScript(args: string[]) {
 		} else {
 			console.warn(`No command to execute for line ${currentLine}`);
 		}
-		currentLine += 1;
+
+		currentLine = nextLine;
+		// Scroll to the bottom of the terminal to show the latest output
+		window.scrollTo(0, document.body.scrollHeight);
+
+		await delay(0);
 	}
 
-	executingScript = false;
+	terminalState.executingScript = false;
+}
+
+export function HaltScript() {
+	if (!terminalState.executingScript) {
+		return;
+	}
+
+	terminalState.executingScript = false;
+
+	terminalState.lines.push({
+		type: "response",
+		value: `Script execution forcibly stopped at line ${currentLine}.`,
+	});
 }
 
 function listLines() {
@@ -78,15 +137,13 @@ function listLines() {
 }
 
 function renumberLines() {
-	let renumberedLines: Map<number, number> = new Map(
-		Array.from(lines.entries()).map((line, index) => [index + 1, line[1]])
-	);
+	let renumberedLines: Map<number, number> = new Map();
 
 	const distance = 10;
 
 	lines = new Map(
 		Array.from(lines.entries()).map((line, index) => {
-			renumberedLines.set(index - 1, (index + 1) * distance);
+			renumberedLines.set(line[0], (index + 1) * distance);
 			return [(index + 1) * distance, line[1]];
 		})
 	);
