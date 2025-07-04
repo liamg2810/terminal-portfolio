@@ -1,38 +1,49 @@
-# sv
+# Terminal Portfolio
 
-Everything you need to build a Svelte project, powered by [`sv`](https://github.com/sveltejs/cli).
+A unique, interactive terminal-style portfolio website built with SvelteKit. Experience my portfolio through a command-line interface that brings together nostalgia and modern web development.
 
-## Creating a project
+## 🚀 Features
 
-If you're seeing this, you've probably already done this step. Congrats!
+-   **Interactive Terminal Interface**: Navigate through my portfolio using familiar terminal commands
+-   **Responsive Design**: Works seamlessly across different devices and screen sizes
+-   **Customizable Colors**: Change the terminal color scheme to your preference
+-   **Command History**: Full command-line experience with proper input handling
 
-```bash
-# create a new project in the current directory
-npx sv create
+## 📋 Available Commands
 
-# create a new project in my-app
-npx sv create my-app
-```
+### Core Commands
 
-## Developing
+-   `help` - Display all available commands
+-   `about` - Learn about me and my background
+-   `projects` - View my development projects
+-   `clear` - Clear the terminal screen
+-   `date` - Show current date and time
 
-Once you've created a project and installed dependencies with `npm install` (or `pnpm install` or `yarn`), start a development server:
+### Customization
 
-```bash
-npm run dev
+-   `colors` - List all available color themes
+-   `color <number>` - Change terminal color (use number from colors list)
 
-# or start the server and open the app in a new browser tab
-npm run dev -- --open
-```
+### Hidden Features
 
-## Building
+The terminal includes some fun easter eggs and additional commands for those who like to explore. Try some common terminal commands and see what happens! 🥚
 
-To create a production version of your app:
+## 🛠️ Tech Stack
 
-```bash
-npm run build
-```
+-   **SvelteKit** - Modern web framework
+-   **TypeScript** - Type-safe development
+-   **Tailwind CSS** - Utility-first styling
+-   **Vite** - Fast build tool
 
-You can preview the production build with `npm run preview`.
+## 🎯 About This Project
 
-> To deploy your app, you may need to install an [adapter](https://svelte.dev/docs/kit/adapters) for your target environment.
+This portfolio showcases my passion for both web development and terminal interfaces. It demonstrates:
+
+-   Modern JavaScript/TypeScript development
+-   Component-based architecture
+-   Interactive user experience design
+-   Creative problem-solving
+
+## 🔗 Connect With Me
+
+Visit the portfolio and use the `about` command to find links to my GitHub and other profiles!

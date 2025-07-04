@@ -1,111 +1,30 @@
 <script lang="ts">
-	import { textCommands } from "$lib/commands";
+	import { parseCommand } from "$lib/commands/command";
+	import { RegisterAllCommands } from "$lib/commands/commands";
+	import {
+		availableColors,
+		changeColor,
+		colorAlias,
+		terminalState,
+	} from "$lib/terminal/terminal.svelte";
 	import { onMount, tick } from "svelte";
-
-	let text: string = $state("");
-	let lines: { type: "input" | "response"; value: string }[] = $state([]);
-
-	const availableColors: string[] = [
-		"neutral-100", // 0 - White
-		"blue-500", // 1 - Blue
-		"green-500", // 2 - Green
-		"cyan-400", // 3 - Aqua
-		"red-500", // 4 - Red
-		"purple-500", // 5 - Purple
-		"yellow-500", // 6 - Yellow
-		"gray-500", // 7 - Gray
-		"pink-400", // 8 - Pink
-		"orange-500", // 9 - Orange
-		"amber-900", // 10 - Brown
-		"black", // 11 - Black
-		"green-300", // 12 - Light Green
-	];
-
-	const colorAlias: string[] = [
-		"white",
-		"blue",
-		"green",
-		"aqua",
-		"red",
-		"purple",
-		"yellow",
-		"gray",
-		"pink",
-		"orange",
-		"brown",
-		"black",
-		"light green",
-	];
-
-	let currentColor: string = $state("neutral-100"); // Default color
-
-	// Use the mapping instead of template literal
-	let textColorClass = $derived("text-" + currentColor);
 
 	let textareaRef: HTMLTextAreaElement;
 
 	let blockInput: boolean = $state(true); // To block input when needed
 
 	function HandleCommand(c: string) {
-		const command = c.trim().split(" ")[0];
-		const options = c.trim().split(" ").slice(1);
-		// Use the mapping to get the command or fallback to the trimmed command
-		const cmd = textCommands.get(command);
+		const command = parseCommand(c);
 
-		if (command === "clear") {
-			lines = [];
-			text = "";
-			console.log("Terminal cleared");
-		} else if (command === "color") {
-			if (options.length > 0) {
-				let colorIndex: number = -1;
-
-				try {
-					colorIndex = parseInt(options[0], 10);
-				} catch (e) {
-					colorIndex = -1;
-				}
-
-				if (
-					isNaN(colorIndex) ||
-					colorIndex < 0 ||
-					colorIndex >= availableColors.length
-				) {
-					lines.push({
-						type: "response",
-						value: "Invalid color. See `colors` for a list of available colors.",
-					});
-					return;
-				}
-
-				currentColor = availableColors[colorIndex];
-
-				lines.push({
-					type: "response",
-					value: `Color changed to ${colorAlias[colorIndex]}.`,
-				});
-			} else {
-				lines.push({
-					type: "response",
-					value: "No color specified. See `colors` for a list of available colors.",
-				});
-			}
-		} else if (command === "date") {
-			lines.push({
-				type: "response",
-				value: `Current date and time: ${new Date().toLocaleString()}`,
+		if (!command) {
+			terminalState.lines.push({
+				type: "input",
+				value: `Unknown command: ${c}. Type 'help' for a list of commands.`,
 			});
-		} else if (cmd) {
-			lines.push({
-				type: "response",
-				value: cmd,
-			});
-		} else {
-			lines.push({
-				type: "response",
-				value: `Unknown command: ${command}. Type 'help' for a list of commands.`,
-			});
+			return;
 		}
+
+		command.run(c);
 	}
 
 	async function handleKeyPress(event: KeyboardEvent) {
@@ -117,19 +36,19 @@
 		if (event.key === "Enter") {
 			event.preventDefault();
 
-			lines.push({
+			terminalState.lines.push({
 				type: "input",
-				value: text,
+				value: terminalState.text,
 			});
 
-			if (text.trim() !== "") {
-				HandleCommand(text);
+			if (terminalState.text.trim() !== "") {
+				HandleCommand(terminalState.text);
 			}
 
-			text = "";
+			terminalState.text = "";
 		} else if (event.key.toLowerCase() === "c" && event.ctrlKey) {
 			event.preventDefault();
-			text = "";
+			terminalState.text = "";
 			console.log("Control + C pressed, clearing input");
 		}
 
@@ -143,17 +62,17 @@
 		index: number = 0
 	) {
 		if (index < message.length) {
-			text += message[index];
+			terminalState.text = terminalState.text + message[index];
 			setTimeout(() => AnimateSendMessage(message, speed, index + 1), 50);
 			return;
 		}
 
-		lines.push({
+		terminalState.lines.push({
 			type: "input",
-			value: text,
+			value: terminalState.text,
 		});
 
-		text = ""; // Clear the input after sending the message
+		terminalState.text = ""; // Clear the input after sending the message
 		blockInput = false; // Allow input after the startup message
 
 		await tick();
@@ -162,6 +81,8 @@
 	}
 
 	onMount(async () => {
+		RegisterAllCommands();
+
 		const startupMessage = `Welcome to my portfolio! Type 'help' for a list of commands.`;
 
 		AnimateSendMessage(startupMessage);
@@ -169,7 +90,7 @@
 </script>
 
 <button
-	class={`w-full h-full flex flex-col ${textColorClass} px-3 focus:outline-none`}
+	class={`w-full h-full flex flex-col text-${terminalState.color} px-3 focus:outline-none`}
 	tabindex="0"
 	aria-label="Terminal input"
 	onclick={() => {
@@ -177,7 +98,7 @@
 		textareaRef.focus();
 	}}
 >
-	{#each lines as line}
+	{#each terminalState.lines as line}
 		<div class="flex w-full">
 			{#if line.type === "input"}
 				<span class="pt-2">>>></span>
@@ -207,7 +128,7 @@
 		<span class="pt-2">>>></span>
 		<textarea
 			onkeydown={handleKeyPress}
-			bind:value={text}
+			bind:value={terminalState.text}
 			class="resize-none bg-transparent border-none outline-none focus:ring-0 hover:cursor-default w-full"
 			bind:this={textareaRef}
 			disabled={blockInput}
