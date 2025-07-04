@@ -11,7 +11,10 @@ function sudoCommand(args: string[]) {
 }
 
 function rmCommand(args: string[]) {
-	if (args.length === 0) {
+	const parameters: string[] = args.filter((arg) => arg.startsWith("-"));
+	const files: string[] = args.filter((arg) => !arg.startsWith("-"));
+
+	if (files.length === 0) {
 		terminalState.lines.push({
 			type: "response",
 			value: "Usage: rm <file>",
@@ -19,12 +22,19 @@ function rmCommand(args: string[]) {
 		return;
 	}
 
-	if (args.includes("-rf") && args.includes("./")) {
+	if (parameters.includes("-rf") && files.includes("./")) {
 		terminalState.lines.push({
 			type: "response",
 			value: "You really shouldn't do that... but okay, if you insist.",
 		});
 		return;
+	}
+
+	if (files.some((f) => f.endsWith("/"))) {
+		terminalState.lines.push({
+			type: "response",
+			value: "The directory is not empty.",
+		});
 	}
 
 	terminalState.lines.push({
