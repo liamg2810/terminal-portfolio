@@ -14,7 +14,7 @@ let lines: Map<number, string> = new Map([
 	[4, "if loops <= 5"],
 	[5, "if xpos <= 20"],
 	[6, "xpos += 1"],
-	[7, 'let padl = " " * xpos'],
+	[7, 'padl = " " * xpos'],
 	[8, "cls"],
 	[9, 'print padl + "O"'],
 	[10, "goto 5"],
@@ -59,12 +59,22 @@ function assignVariable(
 	type: "string" | "number" = "string"
 ) {
 	if (type === "string") {
-		// Remove syntax errors
-		value = value.toString();
+		// Convert to string
+		let stringValue = value.toString();
 
-		if (value.startsWith('"') && value.endsWith('"')) {
+		// If it's already a string without quotes, and it's a result from an operation, use it directly
+		if (typeof value === "string" && !stringValue.startsWith('"')) {
+			stringVars.set(name, stringValue);
+			return;
+		}
+
+		// Handle quoted strings
+		if (stringValue.startsWith('"') && stringValue.endsWith('"')) {
 			// Remove quotes from the string value
-			value = value.slice(1, -1);
+			stringValue = stringValue.slice(1, -1);
+		} else if (typeof value === "number") {
+			// If we're assigning a number to a string variable, convert it
+			stringValue = value.toString();
 		} else {
 			terminalState.lines.push({
 				type: "response",
@@ -73,7 +83,7 @@ function assignVariable(
 			return;
 		}
 
-		stringVars.set(name, value);
+		stringVars.set(name, stringValue);
 	} else if (type === "number") {
 		if (isNaN(Number(value))) {
 			terminalState.lines.push({
@@ -204,48 +214,107 @@ function handleOperation(
 }
 
 function parseRightSide(rightSide: string): string | number | undefined {
-	const parts = rightSide.split(" ");
+	rightSide = rightSide.trim();
 
-	if (parts.length === 0) {
+	// Handle simple cases first
+	if (rightSide === "") {
 		return undefined;
 	}
 
-	if (parts.length === 1) {
-		const singlePart = parts[0].trim();
+	// Use regex to split into tokens: quoted strings, identifiers, numbers, and operators
+	const regex =
+		/"([^"]*)"|([a-zA-Z_][a-zA-Z0-9_]*)|(\d+(?:\.\d+)?)|([+\-*/])/g;
+	const tokens: string[] = [];
+	let match: RegExpExecArray | null;
+	let lastIndex = 0;
 
-		return parseIdentifier(singlePart);
+	while ((match = regex.exec(rightSide)) !== null) {
+		// Check for any non-whitespace characters between tokens that weren't matched
+		const beforeMatch = rightSide.slice(lastIndex, match.index).trim();
+		if (beforeMatch && beforeMatch !== "") {
+			console.log(`DEBUG: Unmatched content: "${beforeMatch}"`);
+			return undefined; // Invalid syntax
+		}
+
+		if (match[1] !== undefined) {
+			// Quoted string - keep quotes for proper identification
+			tokens.push(`"${match[1]}"`);
+		} else if (match[2] !== undefined) {
+			// Variable or identifier
+			tokens.push(match[2]);
+		} else if (match[3] !== undefined) {
+			// Number
+			tokens.push(match[3]);
+		} else if (match[4] !== undefined) {
+			// Operator (removed = from the pattern)
+			tokens.push(match[4]);
+		}
+
+		lastIndex = regex.lastIndex;
 	}
 
-	if (parts.length % 2 === 0) {
-		return undefined; // Even number of parts is not enough for an expression
+	// Check for any remaining non-whitespace content
+	const remaining = rightSide.slice(lastIndex).trim();
+	if (remaining && remaining !== "") {
+		console.log(`DEBUG: Unmatched remaining content: "${remaining}"`);
+		return undefined;
 	}
 
-	const left = parseIdentifier(parts[0].trim());
+	console.log(`DEBUG: Parsed tokens: ${JSON.stringify(tokens)}`);
 
+	if (tokens.length === 0) {
+		return undefined;
+	}
+
+	// Single token - just parse it as an identifier
+	if (tokens.length === 1) {
+		return parseIdentifier(tokens[0]);
+	}
+
+	// For expressions, we need an odd number of tokens (operand operator operand ...)
+	if (tokens.length % 2 === 0) {
+		terminalState.lines.push({
+			type: "response",
+			value: `Invalid expression syntax "${rightSide}" on line ${currentLine}. Expected operand operator operand pattern.`,
+		});
+		return undefined;
+	}
+
+	// Parse left operand
+	const left = parseIdentifier(tokens[0]);
 	if (left === undefined) {
-		terminalState.lines.push({
-			type: "response",
-			value: `Invalid left operand "${parts[0]}" on line ${currentLine}.`,
-		});
-		return undefined;
+		return undefined; // Error already logged in parseIdentifier
 	}
 
-	const operator = parts[1].trim();
-	// Recursively parse the right side
-	// Ignores BODMAS rules for simplicity
-	const right = parseRightSide(parts.slice(2).join(" ").trim());
-
-	if (right === undefined) {
-		terminalState.lines.push({
-			type: "response",
-			value: `Invalid right operand "${parts
-				.slice(2)
-				.join(" ")}" on line ${currentLine}.`,
-		});
-		return undefined;
+	// If we only have 3 tokens, it's a simple binary operation
+	if (tokens.length === 3) {
+		const operator = tokens[1];
+		const right = parseIdentifier(tokens[2]);
+		if (right === undefined) {
+			return undefined; // Error already logged in parseIdentifier
+		}
+		return handleOperation(operator, left, right);
 	}
 
-	return handleOperation(operator, left, right);
+	// For longer expressions, process left to right (no BODMAS for simplicity)
+	let result: string | number = left;
+	for (let i = 1; i < tokens.length; i += 2) {
+		const operator = tokens[i];
+		const rightOperand = parseIdentifier(tokens[i + 1]);
+
+		if (rightOperand === undefined) {
+			return undefined; // Error already logged in parseIdentifier
+		}
+
+		const operationResult = handleOperation(operator, result, rightOperand);
+		if (operationResult === undefined) {
+			return undefined; // Error already logged in handleOperation
+		}
+
+		result = operationResult;
+	}
+
+	return result;
 }
 
 function handleLet(command: string) {
@@ -261,6 +330,10 @@ function handleLet(command: string) {
 	const variableName = parts[0].trim();
 	let variableValue: string | number | undefined = parseRightSide(
 		parts[1].trim()
+	);
+
+	console.log(
+		`DEBUG: variableName: "${variableName}", variableValue: "${variableValue}"`
 	);
 
 	if (
@@ -291,10 +364,18 @@ function handleLet(command: string) {
 		return;
 	}
 
-	if (!isNaN(Number(variableValue))) {
-		assignVariable(variableName, Number(variableValue), "number");
+	if (typeof variableValue === "number") {
+		assignVariable(variableName, variableValue, "number");
 	} else {
-		assignVariable(variableName, `"${variableValue}"`, "string");
+		// For strings, check if they already have quotes or are operation results
+		if (typeof variableValue === "string") {
+			if (variableValue.startsWith('"') && variableValue.endsWith('"')) {
+				assignVariable(variableName, variableValue, "string");
+			} else {
+				// It's a string result from an operation, wrap in quotes for proper handling
+				assignVariable(variableName, `"${variableValue}"`, "string");
+			}
+		}
 	}
 }
 
@@ -311,6 +392,14 @@ function handleVariableCommand(command: string) {
 
 	const variableName = parts[0].trim();
 	const operation = parts[1].trim();
+
+	terminalState.lines.push({
+		type: "response",
+		value: `DEBUG: current variables: ${JSON.stringify({
+			stringVars: Array.from(stringVars.entries()),
+			numberVars: Array.from(numberVars.entries()),
+		})}`,
+	});
 
 	const currentValue = getVar(variableName);
 
@@ -338,6 +427,7 @@ function handleVariableCommand(command: string) {
 			assignValue,
 			typeof currentValue === "string" ? "string" : "number"
 		);
+		return;
 	}
 
 	if (operation === "+=") {
@@ -408,8 +498,6 @@ function handlePrint(command: string) {
 		} else if (match[2] !== undefined) {
 			// Variable
 			const varValue = getVar(match[2].trim());
-			console.log(match[2].trim());
-			console.log(`Variable "${match[2]}" has value:`, varValue);
 			if (varValue !== undefined) {
 				outputParts.push(varValue.toString());
 			} else {
@@ -567,11 +655,6 @@ function ManageCommand(lineNum: number, line: string) {
 		return;
 	}
 
-	if (getVar(commandName) !== undefined) {
-		handleVariableCommand(line);
-		return;
-	}
-
 	if (commandName === "print") {
 		handlePrint(args.join(" "));
 		return;
@@ -626,6 +709,11 @@ function ManageCommand(lineNum: number, line: string) {
 				return;
 			}
 		}
+		return;
+	}
+
+	if (getVar(commandName) !== undefined) {
+		handleVariableCommand(line);
 		return;
 	}
 

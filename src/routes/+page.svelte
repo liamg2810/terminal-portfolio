@@ -94,7 +94,9 @@
 
 		const startupMessage = `Welcome to my portfolio! Type 'help' for a list of commands.`;
 
-		AnimateSendMessage(startupMessage);
+		blockInput = false;
+
+		// AnimateSendMessage(startupMessage);
 
 		document.addEventListener("keydown", (event) => {
 			if (event.key === "Escape") {
