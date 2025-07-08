@@ -166,7 +166,11 @@
 								target="_blank"
 								rel="noopener noreferrer"
 							>
-								{part.split(":link:")[1]}
+								{part
+									.split(":link:")[1]
+									.replaceAll("mailto:", "")
+									.replaceAll("https://", "")
+									.replaceAll("http://", "")}
 							</a>
 						{/if}
 					</span>
