@@ -11,6 +11,8 @@ function helpCommand(args: string[]) {
 	colors - List available colors
 	clear - Clear the terminal
 	date - Show the current date and time
+	save <filename> - Save the current script to a text file
+	load - Load a script from a text file
 	`;
 
 	terminalState.lines.push({
