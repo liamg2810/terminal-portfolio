@@ -1,3 +1,16 @@
+@import url('https://fonts.googleapis.com/css2?family=Ubuntu+Mono:ital,wght@0,400;0,700;1,400;1,700&display=swap');
+
 @import 'tailwindcss';
 @plugin '@tailwindcss/forms';
 @plugin '@tailwindcss/typography';
+
+body {
+	background-color: #1e1e1e; /* Dark background for terminal */
+	color: #ffffff; /* Default text color */
+}
+
+
+*, *::before, *::after {
+	box-sizing: border-box;
+	font-family: 'Ubuntu Mono', monospace; /* Default font for all elements */
+}

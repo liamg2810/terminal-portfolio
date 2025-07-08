@@ -1,7 +1,11 @@
 <script lang="ts">
 	import { parseCommand } from "$lib/commands/command";
 	import { RegisterAllCommands } from "$lib/commands/commands";
-	import { addLine, HaltScript } from "$lib/scripting/scripting";
+	import {
+		addLine,
+		HaltScript,
+		RegisterRunScript,
+	} from "$lib/scripting/scripting";
 	import { terminalState } from "$lib/terminal/terminal.svelte";
 	import { onMount, tick } from "svelte";
 
@@ -18,16 +22,14 @@
 	function HandleCommand(c: string) {
 		const command = parseCommand(c);
 
-		console.log(c);
 		if (!isNaN(parseInt(c.split(" ")[0]))) {
-			console.log("Adding line with number:", c);
 			addLine(parseInt(c), c.split(" ").slice(1).join(" "));
 			return;
 		}
 
 		if (!command) {
 			terminalState.lines.push({
-				type: "input",
+				type: "response",
 				value: `Unknown command: ${c}. Type 'help' for a list of commands.`,
 			});
 			return;
@@ -91,6 +93,12 @@
 
 	onMount(async () => {
 		RegisterAllCommands();
+		RegisterRunScript((message: string) => {
+			terminalState.lines.push({
+				type: "response",
+				value: message,
+			});
+		});
 
 		const startupMessage = `Welcome to my portfolio! Type 'help' for a list of commands.`;
 
@@ -121,10 +129,10 @@
 			{#if line.type === "input"}
 				<span class="pt-2">>>></span>
 			{/if}
-			<div class={`pt-2${line.type === "input" ? " pl-3" : ""}`}>
+			<div class={`${line.type === "input" ? "pt-2 pl-3" : ""}`}>
 				{#each line.value.split("\n") as part, i}
-					<span class=" flex text-left">
-						{part.split(":link:")[0]}
+					<span class="flex text-left text-base">
+						<pre>{part.split(":link:")[0]}</pre>
 						{#if part.split(":link:")[1]}
 							<span>&nbsp;-&nbsp;</span>
 							<a

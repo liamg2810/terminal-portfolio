@@ -1,4 +1,3 @@
-import { registerRunScript } from "../scripting/scripting";
 import { RegisterAboutCommand } from "./about";
 import { RegisterClearCommand } from "./clear";
 import { RegisterColorsCommand } from "./colors";
@@ -17,5 +16,4 @@ export function RegisterAllCommands() {
 	RegisterColorsCommand();
 	RegisterDateCommand();
 	RegisterEasterEggs();
-	registerRunScript();
 }
