@@ -3,14 +3,3 @@
 @import 'tailwindcss';
 @plugin '@tailwindcss/forms';
 @plugin '@tailwindcss/typography';
-
-body {
-	background-color: #1e1e1e; /* Dark background for terminal */
-	color: #ffffff; /* Default text color */
-}
-
-
-*, *::before, *::after {
-	box-sizing: border-box;
-	font-family: 'Ubuntu Mono', monospace; /* Default font for all elements */
-}

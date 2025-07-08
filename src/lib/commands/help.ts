@@ -13,6 +13,7 @@ function helpCommand(args: string[]) {
 	date - Show the current date and time
 	save <filename> - Save the current script to a text file
 	load - Load a script from a text file
+	docs - Open the documentation for my custom scripting language
 	`;
 
 	terminalState.lines.push({

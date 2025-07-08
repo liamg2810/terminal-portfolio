@@ -303,6 +303,14 @@ export function HaltScript() {
 	});
 }
 
+function openDocs() {
+	window.open("/docs", "_blank");
+	terminalState.lines.push({
+		type: "response",
+		value: `Documentation opened in a new tab.`,
+	});
+}
+
 export function RegisterRunScript(output: (message: string) => void) {
 	const runScriptCommand = new Command((args: string[]) => {
 		runScript(args, output);
@@ -313,8 +321,12 @@ export function RegisterRunScript(output: (message: string) => void) {
 	const renumberLinesCommand = new Command((args: string[]) => {
 		renumberLines(output);
 	});
+	const openDocsCommand = new Command((args: string[]) => {
+		openDocs();
+	});
 
 	registerCommand("run", runScriptCommand);
 	registerCommand("list", listLinesCommand);
 	registerCommand("renumber", renumberLinesCommand);
+	registerCommand("docs", openDocsCommand);
 }
