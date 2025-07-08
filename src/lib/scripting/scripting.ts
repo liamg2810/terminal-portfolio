@@ -2,16 +2,25 @@ import { terminalState } from "$lib/terminal/terminal.svelte";
 import { Command, parseCommand, registerCommand } from "../commands/command";
 import {
 	gotoLine,
+	handleForLoop,
 	handleIf,
+	handleNextLoop,
 	handlePrint,
 	listLines,
 	renumberLines,
 } from "./builtins";
-import { FindPairedElse, FindPairedEndIf } from "./utils";
+import {
+	findNextLineNumber,
+	FindPairedElse,
+	FindPairedEndIf,
+	ThrowError,
+} from "./utils";
 import {
 	clearVars,
 	deleteVariable,
+	finishHandleInput,
 	getVar,
+	handleInput,
 	handleLet,
 	handleVariableCommand,
 } from "./vars";
@@ -36,6 +45,23 @@ export function setLines(newLines: Map<number, string>) {
 }
 
 export function setCurrentLine(lineNumber: number) {
+	const maxLineNumber = Math.max(...Array.from(lines.keys()), 0);
+
+	if (lineNumber > maxLineNumber) {
+		// Exit gracefully
+		terminalState.executingScript = false;
+	}
+
+	if (lineNumber < 0) {
+		ThrowError(`Line number cannot be negative.`, (message) => {
+			terminalState.lines.push({
+				type: "response",
+				value: message,
+			});
+		});
+		return;
+	}
+
 	if (lines.has(lineNumber)) {
 		currentLine = lineNumber;
 	}
@@ -101,6 +127,11 @@ function ManageCommand(
 		return;
 	}
 
+	if (commandName === "input") {
+		handleInput(args.join(" "), output);
+		return;
+	}
+
 	if (commandName === "goto") {
 		gotoLine(args, output);
 		return;
@@ -108,6 +139,16 @@ function ManageCommand(
 
 	if (commandName === "del") {
 		deleteVariable(args.join(" "), output);
+		return;
+	}
+
+	if (commandName === "for") {
+		handleForLoop(args.join(" "), output);
+		return;
+	}
+
+	if (commandName === "next") {
+		handleNextLoop(output);
 		return;
 	}
 
@@ -190,12 +231,6 @@ function ManageCommand(
 	});
 }
 
-function findNextLineNumber(startLine: number): number | null {
-	const keys = Array.from(lines.keys());
-	const largerKeys = keys.filter((k) => k > startLine);
-	return largerKeys.length > 0 ? Math.min(...largerKeys) : null;
-}
-
 async function runScript(args: string[], output: (message: string) => void) {
 	const orderedLines: Map<number, string> = new Map(
 		Array.from(lines.entries()).sort((a, b) => a[0] - b[0])
@@ -226,6 +261,17 @@ async function runScript(args: string[], output: (message: string) => void) {
 			ManageCommand(currentLine, command, output);
 		} else {
 			console.warn(`No command to execute for line ${currentLine}`);
+		}
+
+		const isAwaitingForInput = terminalState.awaitingInput;
+
+		while (terminalState.awaitingInput) {
+			// Wait for input to be handled
+			await delay(0);
+		}
+
+		if (isAwaitingForInput) {
+			finishHandleInput(output);
 		}
 
 		// Only advance to next line if currentLine wasn't changed by a jump command

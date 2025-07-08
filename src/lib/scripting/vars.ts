@@ -1,9 +1,12 @@
 import { commands } from "$lib/commands/command";
+import { terminalState } from "$lib/terminal/terminal.svelte";
 import { currentLine } from "./scripting";
 import { SplitTokens, ThrowError } from "./utils";
 
 let stringVars: Map<string, string> = new Map();
 let numberVars: Map<string, number> = new Map();
+
+let inputVariableName: string | undefined;
 
 export function clearVars() {
 	stringVars.clear();
@@ -96,10 +99,17 @@ export function handleOperation(
 				return left * right; // Multiply numbers
 			case "/":
 				if (right === 0) {
-					output(`Cannot divide by zero on line ${currentLine}.`);
+					ThrowError(`Cannot divide by zero.`, output);
 					return undefined;
 				}
 				return left / right; // Divide numbers
+			case "%":
+				if (right === 0) {
+					ThrowError(`Cannot modulo by zero.`, output);
+					return undefined;
+				}
+
+				return left % right; // Modulo operation
 			default:
 				output(
 					`Unknown operator "${operator}" for number operation on line ${currentLine}.`
@@ -135,7 +145,7 @@ export function handleOperation(
 function handleTypeOf(command: string, output: (message: string) => void) {
 	if (!command.startsWith("typeof(") || !command.endsWith(")")) {
 		ThrowError(
-			`Invalid typeof command syntax on line ${currentLine}. Expected "typeof(variableName)".`,
+			`Invalid typeof command syntax on line ${currentLine}. Expected "typeof(variableName)". Got "${command}".`,
 			output
 		);
 		return;
@@ -498,4 +508,75 @@ export function deleteVariable(
 	} else {
 		ThrowError(`Variable "${variableName}" does not exist.`, output);
 	}
+}
+
+// INPUT x
+export async function handleInput(
+	args: string,
+	output: (message: string) => void
+) {
+	if (args.trim() === "" || args.trim().includes(" ")) {
+		ThrowError(
+			`Invalid input command syntax on line ${currentLine}. Expected "input variableName".`,
+			output
+		);
+		return;
+	}
+
+	const variableName = args.trim();
+
+	if (variableName === "" || variableName.includes(" ")) {
+		ThrowError(
+			`Invalid variable name "${variableName}" on line ${currentLine}.`,
+			output
+		);
+		return;
+	}
+
+	if (commands.has(variableName)) {
+		ThrowError(
+			`${variableName} is a command. Please use a different name.`,
+			output
+		);
+		return;
+	}
+
+	inputVariableName = variableName;
+
+	terminalState.inputValue = "";
+	terminalState.awaitingInput = true;
+}
+
+export function finishHandleInput(output: (message: string) => void) {
+	if (inputVariableName === undefined) {
+		ThrowError(
+			`No input variable name specified. Please use "input variableName" command.`,
+			output
+		);
+		return;
+	}
+
+	console.log(`Finishing input for variable: ${inputVariableName}`);
+
+	const trimmedInput = terminalState.inputValue.trim();
+	const inputType =
+		trimmedInput === "" || isNaN(Number(trimmedInput))
+			? "string"
+			: "number";
+
+	console.log(trimmedInput, inputType);
+
+	const finalInput =
+		inputType === "string" ? `"${trimmedInput}"` : Number(trimmedInput);
+
+	if (getVar(inputVariableName) !== undefined) {
+		deleteVariable(inputVariableName, output);
+	}
+
+	assignVariable(inputVariableName, finalInput, inputType, output);
+
+	inputVariableName = undefined;
+
+	terminalState.inputValue = "";
+	terminalState.awaitingInput = false;
 }

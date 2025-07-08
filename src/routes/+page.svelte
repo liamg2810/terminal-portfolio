@@ -17,6 +17,12 @@
 		}
 	});
 
+	$inspect(() => {
+		if (terminalState.awaitingInput) {
+			textareaRef.focus();
+		}
+	});
+
 	let blockInput: boolean = $state(true); // To block input when needed
 
 	function HandleCommand(c: string) {
@@ -46,6 +52,23 @@
 
 		if (event.key === "Enter") {
 			event.preventDefault();
+
+			if (terminalState.awaitingInput) {
+				terminalState.inputValue = terminalState.text;
+				terminalState.awaitingInput = false;
+				terminalState.text = "";
+
+				console.log("Input received:", terminalState.inputValue);
+
+				terminalState.lines.push({
+					type: "scriptin",
+					value: terminalState.inputValue,
+				});
+
+				console.log(terminalState.lines);
+
+				return;
+			}
 
 			terminalState.lines.push({
 				type: "input",
@@ -128,8 +151,10 @@
 		<div class="flex w-full">
 			{#if line.type === "input"}
 				<span class="pt-2">>>></span>
+			{:else if line.type === "scriptin"}
+				<span class="pt-2">?</span>
 			{/if}
-			<div class={`${line.type === "input" ? "pt-2 pl-3" : ""}`}>
+			<div class={`${line.type !== "response" ? "pt-2 pl-3" : ""}`}>
 				{#each line.value.split("\n") as part, i}
 					<span class="flex text-left text-base">
 						<pre>{part.split(":link:")[0]}</pre>
@@ -154,12 +179,16 @@
 		{#if !terminalState.executingScript}
 			<span class="pt-2">>>></span>
 		{/if}
+		{#if terminalState.awaitingInput}
+			<span class="pt-2">?</span>
+		{/if}
 		<textarea
 			onkeydown={handleKeyPress}
 			bind:value={terminalState.text}
 			class="resize-none bg-transparent border-none outline-none focus:ring-0 hover:cursor-default w-full"
 			bind:this={textareaRef}
-			disabled={blockInput || terminalState.executingScript}
+			disabled={blockInput ||
+				(terminalState.executingScript && !terminalState.awaitingInput)}
 		></textarea>
 	</div>
 </button>

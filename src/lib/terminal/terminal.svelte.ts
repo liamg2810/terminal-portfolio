@@ -1,13 +1,17 @@
 export let terminalState: {
 	text: string;
-	lines: { type: "input" | "response"; value: string }[];
+	lines: { type: "input" | "response" | "scriptin"; value: string }[];
 	color: string;
 	executingScript: boolean;
+	inputValue: string;
+	awaitingInput: boolean;
 } = $state({
 	text: "",
 	lines: [],
 	color: "neutral-100",
 	executingScript: false,
+	inputValue: "",
+	awaitingInput: false,
 });
 
 export const availableColors: string[] = [

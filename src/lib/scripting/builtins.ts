@@ -1,6 +1,29 @@
+import { get } from "svelte/store";
 import { currentLine, lines, setCurrentLine, setLines } from "./scripting";
-import { SplitTokens, ThrowError } from "./utils";
-import { getVar, parseIdentifier } from "./vars";
+import {
+	findNextLineNumber,
+	FindPairedNext,
+	SplitTokens,
+	ThrowError,
+} from "./utils";
+import {
+	assignVariable,
+	deleteVariable,
+	getVar,
+	parseIdentifier,
+	parseRightSide,
+} from "./vars";
+
+let forLoops: Map<
+	number,
+	{
+		variable: string;
+		start: number;
+		end: number;
+		step: number;
+		endLine: number;
+	}
+> = new Map();
 
 export function handlePrint(
 	command: string,
@@ -43,41 +66,59 @@ export function handleIf(
 		return false;
 	}
 
-	const variableName = parts[0];
-	const operator = parts[1];
-	const value = parseIdentifier(parts.slice(2).join(" "), output);
+	const operators = ["==", "!=", "<", "<=", ">", ">="];
+	const operatorIndex = parts.findIndex((part) => operators.includes(part));
 
-	const currentValue = parseIdentifier(variableName, output);
-
-	if (currentValue === undefined) {
-		output(
-			`Variable "${variableName}" does not exist on line ${currentLine}.`
-		);
+	if (
+		operatorIndex === -1 ||
+		operatorIndex < 1 ||
+		operatorIndex > parts.length - 2
+	) {
+		output(`Invalid operator in if command on line ${currentLine}`);
 		return false;
 	}
 
+	let leftPart = parts.slice(0, operatorIndex);
+	const operator = parts[operatorIndex];
+	let rightPart = parts.slice(operatorIndex + 1);
+
+	const leftValue = parseRightSide(leftPart.join(" "), output);
+	const rightValue = parseRightSide(rightPart.join(" "), output);
+
+	if (leftValue === undefined || rightValue === undefined) {
+		ThrowError(`Invalid left or right value in if command.`, output);
+		return false;
+	}
+
+	console.log(
+		`Left Value: ${leftValue}, Right Value: ${rightValue}, Operator: ${operator}`
+	);
+
+	console.log(
+		`Types - Left: ${typeof leftValue}, Right: ${typeof rightValue}`
+	);
+
 	let conditionMet = false;
 
-	if (typeof currentValue === "number" && !isNaN(Number(value))) {
-		const numValue = Number(value);
+	if (typeof leftValue === "number" && typeof rightValue === "number") {
 		switch (operator) {
 			case "==":
-				conditionMet = currentValue === numValue;
+				conditionMet = leftValue === rightValue;
 				break;
 			case "!=":
-				conditionMet = currentValue !== numValue;
+				conditionMet = leftValue !== rightValue;
 				break;
 			case "<":
-				conditionMet = currentValue < numValue;
+				conditionMet = leftValue < rightValue;
 				break;
 			case "<=":
-				conditionMet = currentValue <= numValue;
+				conditionMet = leftValue <= rightValue;
 				break;
 			case ">":
-				conditionMet = currentValue > numValue;
+				conditionMet = leftValue > rightValue;
 				break;
 			case ">=":
-				conditionMet = currentValue >= numValue;
+				conditionMet = leftValue >= rightValue;
 				break;
 			default:
 				output(
@@ -85,13 +126,13 @@ export function handleIf(
 				);
 				return false;
 		}
-	} else if (typeof currentValue === "string") {
+	} else if (typeof leftValue === "string") {
 		switch (operator) {
 			case "==":
-				conditionMet = currentValue === value;
+				conditionMet = leftValue === rightValue;
 				break;
 			case "!=":
-				conditionMet = currentValue !== value;
+				conditionMet = leftValue !== rightValue;
 				break;
 			default:
 				output(
@@ -100,8 +141,9 @@ export function handleIf(
 				return false;
 		}
 	} else {
-		output(
-			`Cannot compare variable "${variableName}" of type ${typeof currentValue} with value "${value}" on line ${currentLine}.`
+		ThrowError(
+			`Cannot compare "${leftValue}" of type ${typeof leftValue} with value "${rightValue}".`,
+			output
 		);
 		return false;
 	}
@@ -170,4 +212,177 @@ export function gotoLine(args: string[], output: (message: string) => void) {
 	}
 
 	setCurrentLine(lineNumber);
+}
+
+// for i = EQUATION to EQUATION step EQUATION
+// next
+export function handleForLoop(args: string, output: (message: string) => void) {
+	if (forLoops.has(currentLine)) {
+		const { variable, start, end, step, endLine } =
+			forLoops.get(currentLine)!;
+
+		let currentValue = getVar(variable);
+
+		if (currentValue === undefined) {
+			ThrowError(
+				`Variable "${variable}" does not exist on line ${currentLine}.`,
+				output
+			);
+			return;
+		}
+
+		if (isNaN(Number(currentValue))) {
+			ThrowError(
+				`Variable "${variable}" is not a number on line ${currentLine}.`,
+				output
+			);
+		}
+
+		currentValue = Number(currentValue) + step;
+
+		console.log(step, end, currentValue, currentLine > end);
+
+		if (
+			(step < 0 && currentValue <= end) ||
+			(step > 0 && currentValue >= end)
+		) {
+			forLoops.delete(currentLine);
+			setCurrentLine(findNextLineNumber(endLine) || endLine + 1);
+
+			deleteVariable(variable, output);
+
+			return;
+		}
+
+		console.log(`Updating variable ${variable} to ${currentValue}`);
+
+		assignVariable(variable, currentValue, "number", output);
+
+		setCurrentLine(findNextLineNumber(currentLine) || currentLine + 1);
+		return;
+	}
+
+	const toIndex = args.indexOf(" to ");
+
+	if (toIndex === -1) {
+		ThrowError(
+			`Invalid for loop syntax on line ${currentLine}. Expected "for variable = start to end [step stepValue]".`,
+			output
+		);
+		return false;
+	}
+
+	const beforeTo = args.slice(0, toIndex).trim();
+
+	const stepIndex = args.indexOf(" step ", toIndex + 4);
+
+	const afterTo =
+		stepIndex === -1
+			? args.slice(toIndex + 4).trim()
+			: args.slice(toIndex + 4, stepIndex).trim();
+
+	const stepPart = stepIndex === -1 ? "" : args.slice(stepIndex + 6).trim();
+
+	const beforeToParts = beforeTo.split("=");
+	if (beforeToParts.length !== 2) {
+		ThrowError(
+			`Invalid for loop syntax on line ${currentLine}. Expected "for variable = start to end [step stepValue]".`,
+			output
+		);
+		return false;
+	}
+
+	const variable = beforeToParts[0].trim();
+	let start = parseRightSide(beforeToParts[1].trim(), output);
+	let end = parseRightSide(afterTo, output);
+	let step = stepPart ? parseRightSide(stepPart, output) : 1;
+
+	const pairedNext = FindPairedNext(currentLine);
+
+	if (start === undefined || end === undefined) {
+		ThrowError(
+			`Invalid start or end value in for loop on line ${currentLine}.`,
+			output
+		);
+		return false;
+	}
+
+	if (pairedNext === null) {
+		ThrowError(
+			`No paired 'next' found for 'for' loop on line ${currentLine}.`,
+			output
+		);
+		return false;
+	}
+
+	if (getVar(start.toString()) !== undefined) {
+		start = getVar(start.toString());
+	}
+
+	if (getVar(end.toString()) !== undefined) {
+		end = getVar(end.toString());
+	}
+
+	if (isNaN(Number(start)) || isNaN(Number(end))) {
+		ThrowError(`Invalid start or end value in for loop.`, output);
+		return false;
+	}
+
+	start = Number(start);
+	end = Number(end);
+
+	if (isNaN(Number(step))) {
+		ThrowError(`Invalid step value in for loop.`, output);
+		return false;
+	}
+
+	if (step === undefined) {
+		ThrowError(`Invalid step value in for loop.`, output);
+		return false;
+	}
+
+	step = Number(step);
+
+	if (getVar(variable) !== undefined) {
+		ThrowError(
+			`Variable "${variable}" already exists. Please use a different variable name.`,
+			output
+		);
+	}
+
+	if (step === 0) {
+		ThrowError(`Step value cannot be zero in for loop.`, output);
+		return false;
+	}
+
+	assignVariable(variable, start, "number", output);
+
+	forLoops.set(currentLine, {
+		variable,
+		start,
+		end,
+		step,
+		endLine: pairedNext,
+	});
+}
+
+export function handleNextLoop(output: (message: string) => void) {
+	const forLoop = Array.from(forLoops.entries()).find(
+		([startLine, loop]) => loop.endLine === currentLine
+	);
+
+	console.log(forLoop);
+	console.log(forLoops);
+
+	if (!forLoop) {
+		ThrowError(
+			`No 'for' loop found for 'next' on line ${currentLine}.`,
+			output
+		);
+		return false;
+	}
+
+	const [startLine, loopData] = forLoop;
+
+	setCurrentLine(startLine);
 }
