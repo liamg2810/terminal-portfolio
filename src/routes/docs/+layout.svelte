@@ -12,30 +12,30 @@
 	};
 
 	const links: link[] = $state([
-		{ name: "Home", href: "/docs" },
-		{ name: "Introduction", href: "/docs/intro" },
+		{ name: "Home", href: "/docs/" },
+		{ name: "Introduction", href: "/docs/intro/" },
 		{
 			name: "Variables",
-			href: "/docs/variables",
+			href: "/docs/variables/",
 			expanded: false,
 			subLinks: [
 				{
 					name: "Creating Variables",
-					href: "/docs/variables",
+					href: "/docs/variables/",
 				},
 				{
 					name: "Mutating Variables",
-					href: "/docs/variables/mutating",
+					href: "/docs/variables/mutating/",
 				},
 				{
 					name: "Built-in functions",
-					href: "/docs/variables/builtins",
+					href: "/docs/variables/builtins/",
 				},
 			],
 		},
-		{ name: "Input / Output", href: "/docs/input" },
-		{ name: "Loops", href: "/docs/loops" },
-		{ name: "If Statements", href: "/docs/if" },
+		{ name: "Input / Output", href: "/docs/input/" },
+		{ name: "Loops", href: "/docs/loops/" },
+		{ name: "If Statements", href: "/docs/if/" },
 	]);
 
 	$effect(() => {
