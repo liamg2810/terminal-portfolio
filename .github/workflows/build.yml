@@ -1,0 +1,61 @@
+name: Build and Deploy to Build Branch
+
+on:
+  push:
+    branches:
+      - main  # or the branch you want to watch
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0  # fetch full history needed for pushing branches
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18'  # or your desired version
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Build
+        run: npm run build
+
+      - name: Deploy to build branch
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+          # Create a temporary directory for the build output
+          BUILD_DIR=build_output
+          mkdir $BUILD_DIR
+
+          # Copy build files to temp dir (adjust if your build output is in a specific folder)
+          cp -r build/* $BUILD_DIR/
+
+          # Checkout or create the build branch
+          if git show-ref --verify --quiet refs/heads/build; then
+            git checkout build
+          else
+            git checkout --orphan build
+          fi
+
+          # Remove all files in build branch
+          git rm -rf . > /dev/null 2>&1 || true
+
+          # Copy built files into root
+          cp -r $BUILD_DIR/* .
+
+          # Add and commit
+          git add .
+          git commit -m "Deploy built files from main branch"
+
+          # Push to build branch (force push to overwrite history)
+          git push origin build --force
