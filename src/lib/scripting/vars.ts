@@ -1,5 +1,6 @@
 import { commands } from "$lib/commands/command";
 import { terminalState } from "$lib/terminal/terminal.svelte";
+import { clearForLoops } from "./builtins";
 import { currentLine } from "./scripting";
 import { SplitTokens, ThrowError } from "./utils";
 
@@ -11,6 +12,8 @@ let inputVariableName: string | undefined;
 export function clearVars() {
 	stringVars.clear();
 	numberVars.clear();
+	inputVariableName = undefined; // Reset input variable name
+	clearForLoops(); // Clear for loop state
 }
 
 export function getVar(name: string): string | number | undefined {

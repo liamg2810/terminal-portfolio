@@ -25,6 +25,10 @@ let forLoops: Map<
 	}
 > = new Map();
 
+export function clearForLoops() {
+	forLoops.clear();
+}
+
 export function handlePrint(
 	command: string,
 	output: (message: string) => void
