@@ -107,7 +107,7 @@
 		<a
 			href="https://github.com/liamg2810"
 			target="__away"
-			class="flex h-full items-center gap-2 text-lg hover:text-blue-700"
+			class="flex h-full items-center gap-2 text-lg hover:text-blue-300"
 			><img
 				src="/github-mark-white.svg"
 				alt="Github Logo"
@@ -117,14 +117,14 @@
 		<a
 			href="mailto:liam@zelv.co.uk"
 			target="__away"
-			class="flex h-full items-center gap-2 text-lg hover:text-blue-700"
+			class="flex h-full items-center gap-2 text-lg hover:text-blue-300"
 			><img
 				src="/email.svg"
 				alt="Email Logo"
 				class="aspect-square h-full"
 			/>Contact Me</a
 		>
-		<a href="/" class=" flex-1 pl-3 hover:text-blue-700">Back To Terminal</a
+		<a href="/" class=" flex-1 pl-3 hover:text-blue-300">Back To Terminal</a
 		>
 	</div>
 </div>
