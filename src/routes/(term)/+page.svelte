@@ -17,10 +17,15 @@
 		}
 	});
 
-	$inspect(() => {
-		if (terminalState.awaitingInput) {
+	async function FocusOnAwaitInput(awaiting: boolean) {
+		if (awaiting) {
+			await tick();
 			textareaRef.focus();
 		}
+	}
+
+	$effect(() => {
+		FocusOnAwaitInput(terminalState.awaitingInput);
 	});
 
 	let blockInput: boolean = $state(true); // To block input when needed
@@ -58,14 +63,10 @@
 				terminalState.awaitingInput = false;
 				terminalState.text = "";
 
-				console.log("Input received:", terminalState.inputValue);
-
 				terminalState.lines.push({
 					type: "scriptin",
 					value: terminalState.inputValue,
 				});
-
-				console.log(terminalState.lines);
 
 				return;
 			}

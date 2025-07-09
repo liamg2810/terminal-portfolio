@@ -66,7 +66,7 @@ export function handleIf(
 	const parts = SplitTokens(args.trim());
 
 	if (parts.length < 3) {
-		output(`Invalid if command syntax on line ${currentLine}`);
+		ThrowError(`Invalid if command syntax.`, output);
 		return false;
 	}
 
@@ -78,7 +78,7 @@ export function handleIf(
 		operatorIndex < 1 ||
 		operatorIndex > parts.length - 2
 	) {
-		output(`Invalid operator in if command on line ${currentLine}`);
+		ThrowError(`Invalid operator in if command`, output);
 		return false;
 	}
 
@@ -86,12 +86,30 @@ export function handleIf(
 	const operator = parts[operatorIndex];
 	let rightPart = parts.slice(operatorIndex + 1);
 
-	const leftValue = parseRightSide(leftPart.join(" "), output);
-	const rightValue = parseRightSide(rightPart.join(" "), output);
+	let leftValue = parseRightSide(leftPart.join(" "), output);
+	let rightValue = parseRightSide(rightPart.join(" "), output);
 
 	if (leftValue === undefined || rightValue === undefined) {
 		ThrowError(`Invalid left or right value in if command.`, output);
 		return false;
+	}
+
+	if (
+		typeof leftValue === "string" &&
+		leftValue.startsWith('"') &&
+		leftValue.endsWith('"')
+	) {
+		// If it's a string, remove the quotes for comparison
+		leftValue = leftValue.slice(1, -1);
+	}
+
+	if (
+		typeof rightValue === "string" &&
+		rightValue.startsWith('"') &&
+		rightValue.endsWith('"')
+	) {
+		// If it's a string, remove the quotes for comparison
+		rightValue = rightValue.slice(1, -1);
 	}
 
 	console.log(
@@ -125,9 +143,7 @@ export function handleIf(
 				conditionMet = leftValue >= rightValue;
 				break;
 			default:
-				output(
-					`Unknown operator "${operator}" on line ${currentLine}.`
-				);
+				ThrowError(`Unknown operator "${operator}".`, output);
 				return false;
 		}
 	} else if (typeof leftValue === "string") {
@@ -139,8 +155,9 @@ export function handleIf(
 				conditionMet = leftValue !== rightValue;
 				break;
 			default:
-				output(
-					`Unknown operator "${operator}" for string comparison on line ${currentLine}.`
+				ThrowError(
+					`Unknown operator "${operator}" for string comparison.`,
+					output
 				);
 				return false;
 		}
@@ -197,21 +214,19 @@ export function renumberLines(output: (message: string) => void) {
 
 export function gotoLine(args: string[], output: (message: string) => void) {
 	if (args.length === 0) {
-		output(`Please provide a line number to go to. Line ${currentLine}`);
+		ThrowError(`Please provide a line number to go to.`, output);
 		return;
 	}
 
 	const lineNumber = parseInt(args[0]);
 
 	if (isNaN(lineNumber)) {
-		output(`Error on line ${currentLine}: Invalid line number: ${args[0]}`);
+		ThrowError(`Invalid line number: ${args[0]}`, output);
 		return;
 	}
 
 	if (!lines.has(lineNumber)) {
-		output(
-			`Error on line ${currentLine}: Line ${lineNumber} does not exist.`
-		);
+		ThrowError(`Line ${lineNumber} does not exist.`, output);
 		return;
 	}
 
@@ -228,23 +243,15 @@ export function handleForLoop(args: string, output: (message: string) => void) {
 		let currentValue = getVar(variable);
 
 		if (currentValue === undefined) {
-			ThrowError(
-				`Variable "${variable}" does not exist on line ${currentLine}.`,
-				output
-			);
+			ThrowError(`Variable "${variable}" does not exist.`, output);
 			return;
 		}
 
 		if (isNaN(Number(currentValue))) {
-			ThrowError(
-				`Variable "${variable}" is not a number on line ${currentLine}.`,
-				output
-			);
+			ThrowError(`Variable "${variable}" is not a number.`, output);
 		}
 
 		currentValue = Number(currentValue) + step;
-
-		console.log(step, end, currentValue, currentLine > end);
 
 		if (
 			(step < 0 && currentValue <= end) ||
@@ -258,8 +265,6 @@ export function handleForLoop(args: string, output: (message: string) => void) {
 			return;
 		}
 
-		console.log(`Updating variable ${variable} to ${currentValue}`);
-
 		assignVariable(variable, currentValue, "number", output);
 
 		setCurrentLine(findNextLineNumber(currentLine) || currentLine + 1);
@@ -270,7 +275,7 @@ export function handleForLoop(args: string, output: (message: string) => void) {
 
 	if (toIndex === -1) {
 		ThrowError(
-			`Invalid for loop syntax on line ${currentLine}. Expected "for variable = start to end [step stepValue]".`,
+			`Invalid for loop syntax. Expected "for variable = start to end [step stepValue]".`,
 			output
 		);
 		return false;
@@ -290,7 +295,7 @@ export function handleForLoop(args: string, output: (message: string) => void) {
 	const beforeToParts = beforeTo.split("=");
 	if (beforeToParts.length !== 2) {
 		ThrowError(
-			`Invalid for loop syntax on line ${currentLine}. Expected "for variable = start to end [step stepValue]".`,
+			`Invalid for loop syntax. Expected "for variable = start to end [step stepValue]".`,
 			output
 		);
 		return false;
@@ -304,18 +309,14 @@ export function handleForLoop(args: string, output: (message: string) => void) {
 	const pairedNext = FindPairedNext(currentLine);
 
 	if (start === undefined || end === undefined) {
-		ThrowError(
-			`Invalid start or end value in for loop on line ${currentLine}.`,
-			output
-		);
+		console.log(`Start: ${start}, End: ${end}`);
+		console.log(beforeToParts, afterTo, stepPart);
+		ThrowError(`Invalid start or end value in for loop.`, output);
 		return false;
 	}
 
 	if (pairedNext === null) {
-		ThrowError(
-			`No paired 'next' found for 'for' loop on line ${currentLine}.`,
-			output
-		);
+		ThrowError(`No paired 'next' found for 'for' loop.`, output);
 		return false;
 	}
 
@@ -375,14 +376,8 @@ export function handleNextLoop(output: (message: string) => void) {
 		([startLine, loop]) => loop.endLine === currentLine
 	);
 
-	console.log(forLoop);
-	console.log(forLoops);
-
 	if (!forLoop) {
-		ThrowError(
-			`No 'for' loop found for 'next' on line ${currentLine}.`,
-			output
-		);
+		ThrowError(`No 'for' loop found for 'next'.`, output);
 		return false;
 	}
 

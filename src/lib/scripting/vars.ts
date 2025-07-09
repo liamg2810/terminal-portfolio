@@ -39,8 +39,9 @@ export function assignVariable(
 			// Remove quotes from the string value
 			value = value.slice(1, -1);
 		} else {
-			output(
-				`Invalid value for variable "${name}" on line ${currentLine}. Expected a number or a quoted string.`
+			ThrowError(
+				`Invalid value for variable "${name}". Expected a number or a quoted string.`,
+				output
 			);
 			return;
 		}
@@ -48,8 +49,9 @@ export function assignVariable(
 		stringVars.set(name, value);
 	} else if (type === "number") {
 		if (isNaN(Number(value))) {
-			output(
-				`Invalid value for variable "${name}" on line ${currentLine}. Expected a number.`
+			ThrowError(
+				`Invalid value for variable "${name}". Expected a number.`,
+				output
 			);
 			return;
 		}
@@ -69,8 +71,9 @@ export function handleOperation(
 			case "+":
 				return left + " " + right; // Can only concatenate strings
 			default:
-				output(
-					`Unknown operator "${operator}" for string operation on line ${currentLine}.`
+				ThrowError(
+					`Unknown operator "${operator}" for string operation.`,
+					output
 				);
 				return undefined;
 		}
@@ -80,15 +83,26 @@ export function handleOperation(
 				return left + " " + right; // Concatenate string and number
 			case "*":
 				if (isNaN(Number(right))) {
-					output(
-						`Cannot multiply string "${left}" by non-numeric value "${right}" on line ${currentLine}.`
+					ThrowError(
+						`Cannot multiply string "${left}" by non-numeric value "${right}".`,
+						output
 					);
 					return undefined;
 				}
+
+				if (Number(right) < 0) {
+					ThrowError(
+						`Cannot multiply string "${left}" by negative value "${right}".`,
+						output
+					);
+					return undefined;
+				}
+
 				return left.repeat(Number(right)); // Repeat string
 			default:
-				output(
-					`Unknown operator "${operator}" for string and number operation on line ${currentLine}.`
+				ThrowError(
+					`Unknown operator "${operator}" for string and number operation.`,
+					output
 				);
 				return undefined;
 		}
@@ -114,8 +128,9 @@ export function handleOperation(
 
 				return left % right; // Modulo operation
 			default:
-				output(
-					`Unknown operator "${operator}" for number operation on line ${currentLine}.`
+				ThrowError(
+					`Unknown operator "${operator}" for number operation.`,
+					output
 				);
 				return undefined;
 		}
@@ -125,21 +140,24 @@ export function handleOperation(
 				return left + " " + right; // Concatenate number and string
 			case "*":
 				if (isNaN(Number(left))) {
-					output(
-						`Cannot multiply string "${right}" by non-numeric value "${left}" on line ${currentLine}.`
+					ThrowError(
+						`Cannot multiply string "${right}" by non-numeric value "${left}".`,
+						output
 					);
 					return undefined;
 				}
 				return right.repeat(Number(left)); // Repeat string
 			default:
-				output(
-					`Unknown operator "${operator}" for string and number operation on line ${currentLine}.`
+				ThrowError(
+					`Unknown operator "${operator}" for string and number operation.`,
+					output
 				);
 				return undefined;
 		}
 	} else {
-		output(
-			`Invalid operation between "${left}" and "${right}" with operator "${operator}" on line ${currentLine}.`
+		ThrowError(
+			`Invalid operation between "${left}" and "${right}" with operator "${operator}.`,
+			output
 		);
 		return undefined;
 	}
@@ -148,7 +166,7 @@ export function handleOperation(
 function handleTypeOf(command: string, output: (message: string) => void) {
 	if (!command.startsWith("typeof(") || !command.endsWith(")")) {
 		ThrowError(
-			`Invalid typeof command syntax on line ${currentLine}. Expected "typeof(variableName)". Got "${command}".`,
+			`Invalid typeof command syntax. Expected "typeof(variableName)". Got "${command}".`,
 			output
 		);
 		return;
@@ -158,7 +176,7 @@ function handleTypeOf(command: string, output: (message: string) => void) {
 	const varValue = getVar(varName);
 
 	if (varValue === undefined) {
-		output(`Variable "${varName}" does not exist on line ${currentLine}.`);
+		ThrowError(`Variable "${varName}" does not exist.`, output);
 		return;
 	}
 
@@ -168,7 +186,7 @@ function handleTypeOf(command: string, output: (message: string) => void) {
 function handleRound(command: string, output: (message: string) => void) {
 	if (!command.startsWith("round(") || !command.endsWith(")")) {
 		ThrowError(
-			`Invalid round command syntax on line ${currentLine}. Expected "round(variableName)".`,
+			`Invalid round command syntax. Expected "round(variableName)".`,
 			output
 		);
 		return;
@@ -178,13 +196,14 @@ function handleRound(command: string, output: (message: string) => void) {
 	const varValue = getVar(varName);
 
 	if (varValue === undefined) {
-		output(`Variable "${varName}" does not exist on line ${currentLine}.`);
+		ThrowError(`Variable "${varName}" does not exist.`, output);
 		return;
 	}
 
 	if (typeof varValue !== "number") {
-		output(
-			`Cannot round variable "${varName}" of type "${typeof varValue}" on line ${currentLine}. Expected a number.`
+		ThrowError(
+			`Cannot round variable "${varName}" of type "${typeof varValue}". Expected a number.`,
+			output
 		);
 		return;
 	}
@@ -195,7 +214,7 @@ function handleRound(command: string, output: (message: string) => void) {
 function handleFloor(command: string, output: (message: string) => void) {
 	if (!command.startsWith("floor(") || !command.endsWith(")")) {
 		ThrowError(
-			`Invalid floor command syntax on line ${currentLine}. Expected "floor(variableName)".`,
+			`Invalid floor command syntax. Expected "floor(variableName)".`,
 			output
 		);
 		return;
@@ -205,13 +224,14 @@ function handleFloor(command: string, output: (message: string) => void) {
 	const varValue = getVar(varName);
 
 	if (varValue === undefined) {
-		output(`Variable "${varName}" does not exist on line ${currentLine}.`);
+		ThrowError(`Variable "${varName}" does not exist.`, output);
 		return;
 	}
 
 	if (typeof varValue !== "number") {
-		output(
-			`Cannot floor variable "${varName}" of type "${typeof varValue}" on line ${currentLine}. Expected a number.`
+		ThrowError(
+			`Cannot floor variable "${varName}" of type "${typeof varValue}". Expected a number.`,
+			output
 		);
 		return;
 	}
@@ -222,7 +242,7 @@ function handleFloor(command: string, output: (message: string) => void) {
 function handleCeil(command: string, output: (message: string) => void) {
 	if (!command.startsWith("ceil(") || !command.endsWith(")")) {
 		ThrowError(
-			`Invalid ceil command syntax on line ${currentLine}. Expected "ceil(variableName)".`,
+			`Invalid ceil command syntax. Expected "ceil(variableName)".`,
 			output
 		);
 		return;
@@ -232,13 +252,14 @@ function handleCeil(command: string, output: (message: string) => void) {
 	const varValue = getVar(varName);
 
 	if (varValue === undefined) {
-		output(`Variable "${varName}" does not exist on line ${currentLine}.`);
+		ThrowError(`Variable "${varName}" does not exist.`, output);
 		return;
 	}
 
 	if (typeof varValue !== "number") {
-		output(
-			`Cannot ceil variable "${varName}" of type "${typeof varValue}" on line ${currentLine}. Expected a number.`
+		ThrowError(
+			`Cannot ceil variable "${varName}" of type "${typeof varValue}". Expected a number.`,
+			output
 		);
 		return;
 	}
@@ -294,8 +315,9 @@ export function parseIdentifier(
 		return Number(identifier);
 	}
 
-	output(
-		`Invalid identifier "${identifier}" on line ${currentLine}. Expected a variable, string, or a number.`
+	ThrowError(
+		`Invalid identifier "${identifier}". Expected a variable, string, or a number.`,
+		output
 	);
 
 	return undefined;
@@ -324,10 +346,7 @@ export function parseRightSide(
 	let left = parseIdentifier(parts[0].trim(), output);
 
 	if (left === undefined) {
-		ThrowError(
-			`Invalid left operand "${parts[0]}" on line ${currentLine}.`,
-			output
-		);
+		ThrowError(`Invalid left operand "${parts[0]}".`, output);
 		return undefined;
 	}
 
@@ -338,9 +357,7 @@ export function parseRightSide(
 
 	if (right === undefined) {
 		ThrowError(
-			`Invalid right operand "${parts
-				.slice(2)
-				.join(" ")}" on line ${currentLine}.`,
+			`Invalid right operand "${parts.slice(2).join(" ")}".`,
 			output
 		);
 		return undefined;
@@ -424,7 +441,7 @@ export function handleVariableCommand(
 	const parts = SplitTokens(command.trim());
 
 	if (parts.length < 2) {
-		output(`Invalid variable command syntax on line ${currentLine}`);
+		ThrowError(`Invalid variable command syntax`, output);
 		return;
 	}
 
@@ -436,15 +453,14 @@ export function handleVariableCommand(
 	const assignValue = parseRightSide(parts.slice(2).join(" ").trim(), output);
 
 	if (currentValue === undefined) {
-		output(
-			`Variable "${variableName}" does not exist on line ${currentLine}.`
-		);
+		ThrowError(`Variable "${variableName}" does not exist.`, output);
 		return;
 	}
 
 	if (assignValue === undefined) {
-		output(
-			`Invalid assignment value for variable "${variableName}" on line ${currentLine}.`
+		ThrowError(
+			`Invalid assignment value for variable "${variableName}".`,
+			output
 		);
 		return;
 	}
@@ -474,8 +490,9 @@ export function handleVariableCommand(
 			const newValue = currentValue - Number(assignValue);
 			assignVariable(variableName, newValue, "number", output);
 		} else {
-			output(
-				`Cannot perform -= operation on string variable "${variableName}" on line ${currentLine}.`
+			ThrowError(
+				`Cannot perform -= operation on string variable "${variableName}".`,
+				output
 			);
 		}
 		return;
@@ -487,8 +504,16 @@ export function handleVariableCommand(
 			assignVariable(variableName, newValue, "number", output);
 		} else {
 			if (isNaN(Number(assignValue))) {
-				output(
-					`Cannot perform *= operation on string variable "${variableName}" with non-numeric value "${assignValue}" on line ${currentLine}.`
+				ThrowError(
+					`Cannot perform *= operation on string variable "${variableName}" with non-numeric value "${assignValue}".`,
+					output
+				);
+			}
+
+			if (Number(assignValue) < 0) {
+				ThrowError(
+					`Cannot multiply string variable "${variableName}" by negative value "${assignValue}".`,
+					output
 				);
 			}
 
@@ -520,7 +545,7 @@ export async function handleInput(
 ) {
 	if (args.trim() === "" || args.trim().includes(" ")) {
 		ThrowError(
-			`Invalid input command syntax on line ${currentLine}. Expected "input variableName".`,
+			`Invalid input command syntax. Expected "input variableName".`,
 			output
 		);
 		return;
@@ -529,10 +554,7 @@ export async function handleInput(
 	const variableName = args.trim();
 
 	if (variableName === "" || variableName.includes(" ")) {
-		ThrowError(
-			`Invalid variable name "${variableName}" on line ${currentLine}.`,
-			output
-		);
+		ThrowError(`Invalid variable name "${variableName}".`, output);
 		return;
 	}
 
@@ -566,8 +588,6 @@ export function finishHandleInput(output: (message: string) => void) {
 		trimmedInput === "" || isNaN(Number(trimmedInput))
 			? "string"
 			: "number";
-
-	console.log(trimmedInput, inputType);
 
 	const finalInput =
 		inputType === "string" ? `"${trimmedInput}"` : Number(trimmedInput);

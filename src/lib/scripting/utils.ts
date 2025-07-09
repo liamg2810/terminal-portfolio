@@ -4,6 +4,8 @@ import { currentLine, lines } from "./scripting";
 export function ThrowError(message: string, output: (message: string) => void) {
 	output(`Error on line ${currentLine}: ${message}`);
 	terminalState.executingScript = false;
+	terminalState.awaitingInput = false;
+	terminalState.inputValue = "";
 }
 
 export function SplitTokens(command: string): string[] {

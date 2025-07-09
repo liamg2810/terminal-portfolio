@@ -107,7 +107,7 @@ function ManageCommand(
 	}
 
 	const parts = line.split(" ");
-	const commandName = parts[0].toLowerCase();
+	const commandName = parts[0];
 	const args = parts.slice(1);
 
 	const cmd = parseCommand(line);
@@ -176,14 +176,11 @@ function ManageCommand(
 	}
 
 	if (commandName === "else") {
-		const nextIfLine = findNextCommandLine(lineNum, "endif");
+		const nextIfLine = FindPairedEndIf(lineNum);
 		if (nextIfLine !== null) {
 			currentLine = nextIfLine + 1;
 		} else {
-			terminalState.lines.push({
-				type: "response",
-				value: `Invalid else on line ${lineNum}. Perhaps you forget an endif?`,
-			});
+			ThrowError(`No matching endif found for else statement.`, output);
 			terminalState.executingScript = false;
 			return;
 		}
@@ -214,10 +211,7 @@ function ManageCommand(
 				currentLine =
 					findNextLineNumber(nextEndIfLine) || nextEndIfLine + 1;
 			} else {
-				terminalState.lines.push({
-					type: "response",
-					value: `No matching endif found for if statement on line ${lineNum}.`,
-				});
+				ThrowError("No matching endif found for if statement.", output);
 				terminalState.executingScript = false;
 				return;
 			}
@@ -225,10 +219,7 @@ function ManageCommand(
 		return;
 	}
 
-	terminalState.lines.push({
-		type: "response",
-		value: `Unknown command "${commandName}" on line ${lineNum}.`,
-	});
+	ThrowError(`Unknown command "${commandName}".`, output);
 }
 
 async function runScript(args: string[], output: (message: string) => void) {
@@ -296,6 +287,8 @@ export function HaltScript() {
 	}
 
 	terminalState.executingScript = false;
+	terminalState.awaitingInput = false;
+	terminalState.inputValue = "";
 
 	terminalState.lines.push({
 		type: "response",
