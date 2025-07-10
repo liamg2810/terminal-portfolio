@@ -112,14 +112,6 @@ export function handleIf(
 		rightValue = rightValue.slice(1, -1);
 	}
 
-	console.log(
-		`Left Value: ${leftValue}, Right Value: ${rightValue}, Operator: ${operator}`
-	);
-
-	console.log(
-		`Types - Left: ${typeof leftValue}, Right: ${typeof rightValue}`
-	);
-
 	let conditionMet = false;
 
 	if (typeof leftValue === "number" && typeof rightValue === "number") {
@@ -309,8 +301,6 @@ export function handleForLoop(args: string, output: (message: string) => void) {
 	const pairedNext = FindPairedNext(currentLine);
 
 	if (start === undefined || end === undefined) {
-		console.log(`Start: ${start}, End: ${end}`);
-		console.log(beforeToParts, afterTo, stepPart);
 		ThrowError(`Invalid start or end value in for loop.`, output);
 		return false;
 	}

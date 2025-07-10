@@ -4,23 +4,21 @@ import { clearForLoops } from "./builtins";
 import { currentLine } from "./scripting";
 import { SplitTokens, ThrowError } from "./utils";
 
-let stringVars: Map<string, string> = new Map();
-let numberVars: Map<string, number> = new Map();
+let vars: Map<string, string | number> = new Map();
 
 let inputVariableName: string | undefined;
 
+const builtinFuncs = ["typeof", "round", "floor", "ceil", "exists"];
+
 export function clearVars() {
-	stringVars.clear();
-	numberVars.clear();
+	vars.clear();
 	inputVariableName = undefined; // Reset input variable name
 	clearForLoops(); // Clear for loop state
 }
 
 export function getVar(name: string): string | number | undefined {
-	if (stringVars.has(name)) {
-		return stringVars.get(name);
-	} else if (numberVars.has(name)) {
-		return numberVars.get(name);
+	if (vars.has(name)) {
+		return vars.get(name);
 	}
 	return undefined;
 }
@@ -46,7 +44,7 @@ export function assignVariable(
 			return;
 		}
 
-		stringVars.set(name, value);
+		vars.set(name, value);
 	} else if (type === "number") {
 		if (isNaN(Number(value))) {
 			ThrowError(
@@ -56,7 +54,7 @@ export function assignVariable(
 			return;
 		}
 
-		numberVars.set(name, Number(value));
+		vars.set(name, Number(value));
 	}
 }
 
@@ -69,7 +67,7 @@ export function handleOperation(
 	if (typeof left === "string" && typeof right === "string") {
 		switch (operator) {
 			case "+":
-				return left + " " + right; // Can only concatenate strings
+				return left + "" + right; // Can only concatenate strings
 			default:
 				ThrowError(
 					`Unknown operator "${operator}" for string operation.`,
@@ -307,7 +305,6 @@ export function parseIdentifier(
 
 	if (identifier.startsWith("exists(") && identifier.endsWith(")")) {
 		const varName = identifier.slice(7, -1).trim();
-		console.log(handleExists(varName), varName);
 		return handleExists(varName) ? '"true"' : '"false"';
 	}
 
@@ -327,10 +324,14 @@ export function parseRightSide(
 	rightSide: string,
 	output: (message: string) => void
 ): string | number | undefined {
-	const parts = SplitTokens(rightSide);
+	let parts = SplitTokens(rightSide);
 
 	if (parts.length === 0) {
 		return undefined;
+	}
+
+	if (builtinFuncs.includes(parts[0])) {
+		return parseIdentifier(parts.join(""), output);
 	}
 
 	if (parts.length === 1) {
@@ -343,44 +344,134 @@ export function parseRightSide(
 		return undefined; // Even number of parts is not enough for an expression
 	}
 
-	let left = parseIdentifier(parts[0].trim(), output);
+	const operators: { [key: string]: number } = {
+		"+": 1,
+		"-": 1,
+		"*": 2,
+		"/": 2,
+		"%": 2,
+	};
 
-	if (left === undefined) {
-		ThrowError(`Invalid left operand "${parts[0]}".`, output);
-		return undefined;
+	// Shunting Yard Algorithm to convert to Reverse Polish Notation (RPN)
+	// Now supports parentheses for grouping (BODMAS)
+	function toRPN(tokens: string[]): string[] {
+		const outputQueue: string[] = [];
+		const operatorStack: string[] = [];
+		const precedence: { [key: string]: number } = {
+			"+": 1,
+			"-": 1,
+			"*": 2,
+			"/": 2,
+			"%": 2,
+		};
+		const associativity: { [key: string]: "left" | "right" } = {
+			"+": "left",
+			"-": "left",
+			"*": "left",
+			"/": "left",
+			"%": "left",
+		};
+
+		for (let token of tokens) {
+			token = token.trim();
+			if (token === "(") {
+				operatorStack.push(token);
+			} else if (token === ")") {
+				while (
+					operatorStack.length > 0 &&
+					operatorStack[operatorStack.length - 1] !== "("
+				) {
+					outputQueue.push(operatorStack.pop()!);
+				}
+				if (
+					operatorStack.length === 0 ||
+					operatorStack[operatorStack.length - 1] !== "("
+				) {
+					ThrowError("Mismatched parentheses in expression.", output);
+					return [];
+				}
+				operatorStack.pop(); // Remove "("
+			} else if (operators[token]) {
+				while (
+					operatorStack.length > 0 &&
+					operators[operatorStack[operatorStack.length - 1]] &&
+					((associativity[token] === "left" &&
+						precedence[token] <=
+							precedence[
+								operatorStack[operatorStack.length - 1]
+							]) ||
+						(associativity[token] === "right" &&
+							precedence[token] <
+								precedence[
+									operatorStack[operatorStack.length - 1]
+								]))
+				) {
+					outputQueue.push(operatorStack.pop()!);
+				}
+				operatorStack.push(token);
+			} else {
+				outputQueue.push(token);
+			}
+		}
+		while (operatorStack.length > 0) {
+			const op = operatorStack.pop()!;
+			if (op === "(" || op === ")") {
+				ThrowError("Mismatched parentheses in expression.", output);
+				return [];
+			}
+			outputQueue.push(op);
+		}
+		return outputQueue;
 	}
 
-	const operator = parts[1].trim();
-	// Recursively parse the right side
-	// Ignores BODMAS rules for simplicity
-	let right = parseRightSide(parts.slice(2).join(" ").trim(), output);
-
-	if (right === undefined) {
-		ThrowError(
-			`Invalid right operand "${parts.slice(2).join(" ")}".`,
-			output
-		);
-		return undefined;
+	// Evaluate RPN
+	function evalRPN(rpn: string[]): string | number | undefined {
+		const stack: (string | number)[] = [];
+		for (const token of rpn) {
+			if (operators[token]) {
+				if (stack.length < 2) {
+					ThrowError(`Invalid expression syntax.`, output);
+					return undefined;
+				}
+				const right = stack.pop()!;
+				const left = stack.pop()!;
+				let leftVal = left;
+				let rightVal = right;
+				let leftString =
+					typeof leftVal === "string" &&
+					leftVal.toString().startsWith('"');
+				let rightString =
+					typeof rightVal === "string" &&
+					rightVal.toString().startsWith('"');
+				if (leftString) leftVal = leftVal.toString().slice(1, -1);
+				if (rightString) rightVal = rightVal.toString().slice(1, -1);
+				const result = handleOperation(
+					token,
+					leftVal,
+					rightVal,
+					output
+				);
+				if (result === undefined) return undefined;
+				stack.push(result);
+			} else {
+				const value = parseIdentifier(token, output);
+				if (value === undefined) return undefined;
+				stack.push(value);
+			}
+		}
+		if (stack.length !== 1) {
+			ThrowError(`Invalid expression syntax.`, output);
+			return undefined;
+		}
+		const result = stack[0];
+		if (typeof result === "string") {
+			return `"${result.toString().replace(/^"|"$/g, "")}"`;
+		}
+		return result;
 	}
 
-	let leftString = left.toString().startsWith('"');
-	let rightString = right.toString().startsWith('"');
-
-	if (leftString) {
-		left = left.toString().slice(1, -1);
-	}
-
-	if (rightString) {
-		right = right.toString().slice(1, -1);
-	}
-
-	const retValue = handleOperation(operator, left, right, output);
-
-	if (leftString || rightString) {
-		return `"${retValue}"`; // Return as string if either operand was a string
-	}
-
-	return retValue; // Return as number if both operands were numbers
+	const rpn = toRPN(parts);
+	return evalRPN(rpn);
 }
 
 export function handleLet(command: string, output: (message: string) => void) {
@@ -436,8 +527,6 @@ export function handleVariableCommand(
 	command: string,
 	output: (message: string) => void
 ) {
-	console.log(stringVars, numberVars);
-
 	const parts = SplitTokens(command.trim());
 
 	if (parts.length < 2) {
@@ -529,10 +618,8 @@ export function deleteVariable(
 	variableName: string,
 	output: (message: string) => void
 ) {
-	if (stringVars.has(variableName)) {
-		stringVars.delete(variableName);
-	} else if (numberVars.has(variableName)) {
-		numberVars.delete(variableName);
+	if (vars.has(variableName)) {
+		vars.delete(variableName);
 	} else {
 		ThrowError(`Variable "${variableName}" does not exist.`, output);
 	}
@@ -580,8 +667,6 @@ export function finishHandleInput(output: (message: string) => void) {
 		);
 		return;
 	}
-
-	console.log(`Finishing input for variable: ${inputVariableName}`);
 
 	const trimmedInput = terminalState.inputValue.trim();
 	const inputType =

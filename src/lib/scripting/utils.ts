@@ -10,7 +10,8 @@ export function ThrowError(message: string, output: (message: string) => void) {
 
 export function SplitTokens(command: string): string[] {
 	// Split by spaces, but keep quoted strings together
-	const regex = /"([^"]+)"|(\S+)/g;
+	// Split parentheses as seperate tokens
+	const regex = /"([^"]*)"|([^\s()]+)|(\()|(\))/g;
 	const tokens: string[] = [];
 	let match;
 
@@ -21,6 +22,12 @@ export function SplitTokens(command: string): string[] {
 		} else if (match[2]) {
 			// Non-quoted token
 			tokens.push(match[2]);
+		} else if (match[3]) {
+			// Opening parenthesis
+			tokens.push("(");
+		} else if (match[4]) {
+			// Closing parenthesis
+			tokens.push(")");
 		}
 	}
 
