@@ -8,8 +8,7 @@ function aboutCommand() {
 I have experience in JavaScript, TypeScript, Svelte, and many more languages.
 I enjoy building projects that solve real-world problems and improve user experiences.
 I love Star Wars, Chess, and the Gym.
-You can find more about me and my projects on my GitHub profile:link:https://github.com/liamg2810
-You can contact me at:link:mailto:liam@zelv.co.uk`,
+You can find more about me and my projects on my GitHub profile:link:https://github.com/liamg2810`,
 	});
 }
 
