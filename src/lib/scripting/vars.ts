@@ -1,5 +1,7 @@
 import { commands } from "$lib/commands/command";
+import { keys } from "$lib/stores/keys";
 import { terminalState } from "$lib/terminal/terminal.svelte";
+import { get } from "svelte/store";
 import { clearForLoops } from "./builtins";
 import { currentLine } from "./scripting";
 import { SplitTokens, ThrowError } from "./utils";
@@ -8,7 +10,15 @@ export let scopes: Map<string, string | number>[] = [new Map()];
 
 let inputVariableName: string | undefined;
 
-const builtinFuncs = ["typeof", "round", "floor", "ceil", "exists", "len"];
+const builtinFuncs = [
+	"typeof",
+	"round",
+	"floor",
+	"ceil",
+	"exists",
+	"len",
+	"keydown",
+];
 
 export function clearVars() {
 	scopes = [new Map()];
@@ -324,6 +334,36 @@ export function parseIdentifier(
 
 	if (identifier.startsWith("len(") && identifier.endsWith(")")) {
 		return handleLen(identifier, output);
+	}
+
+	if (identifier.startsWith("keydown(") && identifier.endsWith(")")) {
+		// Handle keydown function
+		const keyName = identifier.slice(8, -1).trim();
+		if (keyName === "") {
+			ThrowError(`Invalid key name in keydown command.`, output);
+			return undefined;
+		}
+
+		if (!keyName.startsWith('"') && !keyName.endsWith('"')) {
+			ThrowError(
+				`Invalid key name "${keyName}". Expected a quoted string.`,
+				output
+			);
+			return undefined;
+		}
+
+		const key = keyName.slice(1, -1); // Remove quotes
+
+		if (key === "") {
+			ThrowError(`Invalid key name in keydown command.`, output);
+			return undefined;
+		}
+
+		if (get(keys).has(key)) {
+			return `"true"`; // Return the key name if it exists
+		} else {
+			return `"false"`; // Return false if the key is not pressed
+		}
 	}
 
 	if (!isNaN(Number(identifier))) {

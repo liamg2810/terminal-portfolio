@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { startUptimeTracker } from "$lib/uptime";
+	import { startUptimeTracker } from "$lib/stores/uptime";
 	import { onMount } from "svelte";
 	import "../app.css";
 

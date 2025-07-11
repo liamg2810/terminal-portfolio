@@ -246,7 +246,8 @@ export function handleForLoop(args: string, output: (message: string) => void) {
 		}
 
 		currentValue = Number(currentValue) + step;
-		scopes.pop();
+
+		scopes[scopes.length - 1].clear();
 
 		if (
 			(step < 0 && currentValue <= end) ||
@@ -258,7 +259,6 @@ export function handleForLoop(args: string, output: (message: string) => void) {
 			return;
 		}
 
-		scopes.push(new Map());
 		assignVariable(variable, currentValue, output, true);
 
 		setCurrentLine(findNextLineNumber(currentLine) || currentLine + 1);

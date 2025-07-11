@@ -1,5 +1,5 @@
+import { uptime } from "$lib/stores/uptime";
 import { terminalState } from "$lib/terminal/terminal.svelte";
-import { uptime } from "$lib/uptime";
 import { get } from "svelte/store";
 import { Command, registerCommand } from "./command";
 
