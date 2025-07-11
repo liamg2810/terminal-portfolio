@@ -1,4 +1,6 @@
 import { terminalState } from "$lib/terminal/terminal.svelte";
+import { uptime } from "$lib/uptime";
+import { get } from "svelte/store";
 import { Command, registerCommand } from "./command";
 
 let installedPackages: Set<string> = new Set();
@@ -22,7 +24,7 @@ function rmCommand(args: string[]) {
 		return;
 	}
 
-	if (parameters.includes("-rf") && files.includes("./")) {
+	if (parameters.includes("-rf") && files.includes("~/")) {
 		terminalState.lines.push({
 			type: "response",
 			value: "You really shouldn't do that... but okay, if you insist.",
@@ -162,6 +164,46 @@ function echoCommand(args: string[]) {
 	});
 }
 
+function neofetchCommand(args: string[]) {
+	let used = (3 + Math.random()).toFixed(2);
+	let total = 16;
+
+	terminalState.lines.push({
+		type: "response",
+		value: `
+                           :+%@@@@@@@@@%*-              		OS: SvelteOS 1.0.0
+                       =#@@@@@@@@@@@@@@@@@@@%=          		Kernel: 5.10.42-svelte
+                   -*@@@@@@@@@@@@@@@@@@@@@@@@@@*:       		Uptime: ${get(uptime)}
+                =@@@@@@@@@@@%+         -#@@@@@@@@*      		Packages: ${
+					Array.from(installedPackages).length
+				} (pacman)
+            -%@@@@@@@@@@@*:               :%@@@@@@@:    		Shell: Svelte Shell
+         +%@@@@@@@@@@#-                     =@@@@@@%:   		Resolution: ${
+				window.screen.width
+			}x${window.screen.height}
+       *@@@@@@@@@#+            =#@@@@%       +@@@@@@+   		DE: Svelte Desktop
+     :@@@@@@@@*:           -#@@@@@@@@@*:     =@@@@@@*   	    WM: SvelteWM
+    :@@@@@@@*           *@@@@@@@@@@@@@@@@@@= *@@@@@@+   		CPU: Intel Core i7 7700K
+    *@@@@@@+        =%@@@@@@@@@@@@@@@@@@@@@@@@@@@@@#    		GPU: NVIDIA GeForce RTX 2070 Ti
+    #@@@@@@:      +@@@@@@@@@*-        -*%@@@@@@@@@%:    		Memory: ${used}GB / ${total}GB
+    #@@@@@@-      -@@@@@%=               :#@@@@@@@:     
+    -@@@@@@@                                @@@@@@@-    
+     -@@@@@@@#:               :#@@@@%:      -@@@@@@#    
+     #@@@@@@@@@%+-        =*%@@@@@@@@+      :@@@@@@%    
+    #@@@@@@@@@@@@@@@@@@@@@@@@@@@@@%+        =@@@@@@#    
+   =@@@@@@*:+@@@@@@@@@@@@@@@@@@%           +@@@@@@@:    
+   +@@@@@@=     -*@@@@@@@@@#-           :+@@@@@@@@:     
+   =@@@@@@+      :%@@@@%+:           =#@@@@@@@@@#       
+   :#@@@@@@=                     -*@@@@@@@@@@@*:        
+    :@@@@@@@%:                +@@@@@@@@@@@@+            
+      #@@@@@@@@*:         =%@@@@@@@@@@@*:               
+       :#@@@@@@@@@@@@@@@@@@@@@@@@@@#=                   
+          +%@@@@@@@@@@@@@@@@@@@%+                       
+              =#@@@@@@@@@@@#-                           
+		`,
+	});
+}
+
 export function RegisterEasterEggs() {
 	const sudo = new Command(sudoCommand);
 	const rm = new Command(rmCommand);
@@ -170,6 +212,7 @@ export function RegisterEasterEggs() {
 	const chess = new Command(chessCommand);
 	const packageManager = new Command(packageManagerCommand);
 	const echo = new Command(echoCommand);
+	const neofetch = new Command(neofetchCommand);
 
 	const storedPackages = localStorage.getItem("installedPackages");
 	if (storedPackages) {
@@ -188,4 +231,5 @@ export function RegisterEasterEggs() {
 	registerCommand("yum", packageManager);
 	registerCommand("apt", packageManager);
 	registerCommand("echo", echo);
+	registerCommand("neofetch", neofetch);
 }

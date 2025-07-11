@@ -1,6 +1,7 @@
 import { get } from "svelte/store";
 import { currentLine, lines, setCurrentLine, setLines } from "./scripting";
 import {
+	delay,
 	findNextLineNumber,
 	FindPairedNext,
 	SplitTokens,
@@ -12,6 +13,7 @@ import {
 	getVar,
 	parseIdentifier,
 	parseRightSide,
+	scopes,
 } from "./vars";
 
 let forLoops: Map<
@@ -244,6 +246,7 @@ export function handleForLoop(args: string, output: (message: string) => void) {
 		}
 
 		currentValue = Number(currentValue) + step;
+		scopes.pop();
 
 		if (
 			(step < 0 && currentValue <= end) ||
@@ -252,12 +255,11 @@ export function handleForLoop(args: string, output: (message: string) => void) {
 			forLoops.delete(currentLine);
 			setCurrentLine(findNextLineNumber(endLine) || endLine + 1);
 
-			deleteVariable(variable, output);
-
 			return;
 		}
 
-		assignVariable(variable, currentValue, "number", output);
+		scopes.push(new Map());
+		assignVariable(variable, currentValue, output, true);
 
 		setCurrentLine(findNextLineNumber(currentLine) || currentLine + 1);
 		return;
@@ -338,19 +340,14 @@ export function handleForLoop(args: string, output: (message: string) => void) {
 
 	step = Number(step);
 
-	if (getVar(variable) !== undefined) {
-		ThrowError(
-			`Variable "${variable}" already exists. Please use a different variable name.`,
-			output
-		);
-	}
-
 	if (step === 0) {
 		ThrowError(`Step value cannot be zero in for loop.`, output);
 		return false;
 	}
 
-	assignVariable(variable, start, "number", output);
+	scopes.push(new Map());
+
+	assignVariable(variable, start, output, true);
 
 	forLoops.set(currentLine, {
 		variable,
@@ -374,4 +371,24 @@ export function handleNextLoop(output: (message: string) => void) {
 	const [startLine, loopData] = forLoop;
 
 	setCurrentLine(startLine);
+}
+
+export async function handleSleep(
+	args: string,
+	output: (message: string) => void
+) {
+	const duration = parseRightSide(args, output);
+
+	if (duration === undefined) {
+		ThrowError(`Invalid sleep duration.`, output);
+		return;
+	}
+
+	if (typeof duration !== "number" || isNaN(duration) || duration < 0) {
+		ThrowError(`Invalid duration: ${args[0]}`, output);
+		return;
+	}
+
+	await delay(duration);
+	setCurrentLine(findNextLineNumber(currentLine) || currentLine + 1);
 }

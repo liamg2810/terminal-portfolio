@@ -6,10 +6,18 @@ import {
 	handleIf,
 	handleNextLoop,
 	handlePrint,
+	handleSleep,
 	listLines,
 	renumberLines,
 } from "./builtins";
 import {
+	CallFunction,
+	EndFunction,
+	FindFunctions,
+	StepOverFunction,
+} from "./functions";
+import {
+	delay,
 	findNextLineNumber,
 	FindPairedElse,
 	FindPairedEndIf,
@@ -73,30 +81,7 @@ function orderLines() {
 	lines = new Map(Array.from(lines.entries()).sort((a, b) => a[0] - b[0]));
 }
 
-function findNextCommandLine(
-	startLine: number,
-	targetCommand: string
-): number | null {
-	for (
-		let i = startLine + 1;
-		i <= Math.max(...Array.from(lines.keys()));
-		i++
-	) {
-		if (lines.has(i)) {
-			const command = lines.get(i);
-			if (command && command.trim().startsWith(targetCommand)) {
-				return i;
-			}
-		}
-	}
-	return null;
-}
-
-async function delay(ms: number) {
-	return new Promise((resolve) => setTimeout(resolve, ms));
-}
-
-function ManageCommand(
+async function ManageCommand(
 	lineNum: number,
 	line: string,
 	output: (message: string) => void
@@ -132,6 +117,26 @@ function ManageCommand(
 		return;
 	}
 
+	if (commandName === "def") {
+		StepOverFunction(args, output);
+		return;
+	}
+
+	if (commandName === "sleep") {
+		await handleSleep(args.join(" "), output);
+		return;
+	}
+
+	if (commandName === "enddef") {
+		EndFunction(output);
+		return;
+	}
+
+	if (commandName === "call") {
+		CallFunction(args[0], output);
+		return;
+	}
+
 	if (commandName === "goto") {
 		gotoLine(args, output);
 		return;
@@ -162,11 +167,6 @@ function ManageCommand(
 		}
 		const sleepDuration = parseInt(args[0]);
 		delay(sleepDuration);
-		return;
-	}
-
-	if (getVar(commandName) !== undefined) {
-		handleVariableCommand(line, output);
 		return;
 	}
 
@@ -219,6 +219,10 @@ function ManageCommand(
 		return;
 	}
 
+	if (getVar(commandName) !== undefined) {
+		handleVariableCommand(line, output);
+		return;
+	}
 	ThrowError(`Unknown command "${commandName}".`, output);
 }
 
@@ -237,6 +241,8 @@ async function runScript(args: string[], output: (message: string) => void) {
 	currentLine = 0;
 	terminalState.executingScript = true;
 
+	FindFunctions(output);
+
 	while (currentLine <= largestLineNumber && terminalState.executingScript) {
 		if (!orderedLines.has(currentLine)) {
 			const nextLine =
@@ -249,7 +255,7 @@ async function runScript(args: string[], output: (message: string) => void) {
 		const originalLine = currentLine;
 
 		if (command) {
-			ManageCommand(currentLine, command, output);
+			await ManageCommand(currentLine, command, output);
 		} else {
 			console.warn(`No command to execute for line ${currentLine}`);
 		}

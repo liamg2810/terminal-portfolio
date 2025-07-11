@@ -4,32 +4,35 @@ import { clearForLoops } from "./builtins";
 import { currentLine } from "./scripting";
 import { SplitTokens, ThrowError } from "./utils";
 
-let vars: Map<string, string | number> = new Map();
+export let scopes: Map<string, string | number>[] = [new Map()];
 
 let inputVariableName: string | undefined;
 
-const builtinFuncs = ["typeof", "round", "floor", "ceil", "exists"];
+const builtinFuncs = ["typeof", "round", "floor", "ceil", "exists", "len"];
 
 export function clearVars() {
-	vars.clear();
+	scopes = [new Map()];
 	inputVariableName = undefined; // Reset input variable name
 	clearForLoops(); // Clear for loop state
 }
 
 export function getVar(name: string): string | number | undefined {
-	if (vars.has(name)) {
-		return vars.get(name);
+	for (const scope of scopes.slice().reverse()) {
+		if (scope.has(name)) {
+			return scope.get(name);
+		}
 	}
-	return undefined;
+
+	return undefined; // Variable not found in any scope
 }
 
 export function assignVariable(
 	name: string,
 	value: string | number,
-	type: "string" | "number" = "string",
-	output: (message: string) => void
+	output: (message: string) => void,
+	fromLet: boolean = false
 ) {
-	if (type === "string") {
+	if (typeof value === "string") {
 		// Remove syntax errors
 		value = value.toString();
 
@@ -43,19 +46,30 @@ export function assignVariable(
 			);
 			return;
 		}
+	}
 
-		vars.set(name, value);
-	} else if (type === "number") {
-		if (isNaN(Number(value))) {
+	if (fromLet) {
+		if (scopes[scopes.length - 1].has(name)) {
 			ThrowError(
-				`Invalid value for variable "${name}". Expected a number.`,
+				`Variable "${name}" already exists. Use a different name.`,
 				output
 			);
 			return;
 		}
 
-		vars.set(name, Number(value));
+		scopes[scopes.length - 1].set(name, value); // Add to the current scope
+
+		return;
 	}
+
+	for (const scope of scopes.slice().reverse()) {
+		if (scope.has(name)) {
+			scope.set(name, value);
+			return; // Variable already exists, update it
+		}
+	}
+
+	scopes[scopes.length - 1].set(name, value); // Add to the current scope
 }
 
 export function handleOperation(
@@ -308,6 +322,10 @@ export function parseIdentifier(
 		return handleExists(varName) ? '"true"' : '"false"';
 	}
 
+	if (identifier.startsWith("len(") && identifier.endsWith(")")) {
+		return handleLen(identifier, output);
+	}
+
 	if (!isNaN(Number(identifier))) {
 		return Number(identifier);
 	}
@@ -496,7 +514,7 @@ export function handleLet(command: string, output: (message: string) => void) {
 		return;
 	}
 
-	if (getVar(variableName) !== undefined) {
+	if (scopes[scopes.length - 1].has(variableName)) {
 		ThrowError(
 			`Variable "${variableName}" already exists. Use a different name.`,
 			output
@@ -512,15 +530,35 @@ export function handleLet(command: string, output: (message: string) => void) {
 		return;
 	}
 
-	if (
-		variableValue.toString().startsWith('"') &&
-		variableValue.toString().endsWith('"')
-	) {
-		variableValue = variableValue.toString().slice(1, -1);
-		assignVariable(variableName, `"${variableValue}"`, "string", output);
-	} else {
-		assignVariable(variableName, Number(variableValue), "number", output);
+	assignVariable(variableName, variableValue, output);
+}
+
+export function handleLen(
+	command: string,
+	output: (message: string) => void
+): number | undefined {
+	if (!command.startsWith("len(") || !command.endsWith(")")) {
+		ThrowError(`Invalid len command syntax.`, output);
+		return;
 	}
+
+	const varName = command.slice(4, -1).trim();
+	const varValue = getVar(varName);
+
+	if (varValue === undefined) {
+		ThrowError(`Variable "${varName}" does not exist.`, output);
+		return;
+	}
+
+	if (typeof varValue !== "string") {
+		ThrowError(
+			`Cannot get length of variable "${varName}" of type "${typeof varValue}". Expected a string.`,
+			output
+		);
+		return;
+	}
+
+	return varValue.toString().length;
 }
 
 export function handleVariableCommand(
@@ -555,21 +593,16 @@ export function handleVariableCommand(
 	}
 
 	if (operation === "=") {
-		assignVariable(
-			variableName,
-			assignValue,
-			typeof currentValue === "string" ? "string" : "number",
-			output
-		);
+		assignVariable(variableName, assignValue, output);
 	}
 
 	if (operation === "+=") {
 		if (typeof currentValue === "number") {
 			const newValue = currentValue + Number(assignValue);
-			assignVariable(variableName, newValue, "number", output);
+			assignVariable(variableName, newValue, output);
 		} else {
 			const newValue = currentValue + " " + assignValue;
-			assignVariable(variableName, newValue, "string", output);
+			assignVariable(variableName, newValue, output);
 		}
 		return;
 	}
@@ -577,7 +610,7 @@ export function handleVariableCommand(
 	if (operation === "-=") {
 		if (typeof currentValue === "number") {
 			const newValue = currentValue - Number(assignValue);
-			assignVariable(variableName, newValue, "number", output);
+			assignVariable(variableName, newValue, output);
 		} else {
 			ThrowError(
 				`Cannot perform -= operation on string variable "${variableName}".`,
@@ -590,7 +623,7 @@ export function handleVariableCommand(
 	if (operation === "*=") {
 		if (typeof currentValue === "number") {
 			const newValue = currentValue * Number(assignValue);
-			assignVariable(variableName, newValue, "number", output);
+			assignVariable(variableName, newValue, output);
 		} else {
 			if (isNaN(Number(assignValue))) {
 				ThrowError(
@@ -608,7 +641,7 @@ export function handleVariableCommand(
 
 			const newValue = currentValue.repeat(Number(assignValue));
 
-			assignVariable(variableName, `"${newValue}"`, "string", output);
+			assignVariable(variableName, `"${newValue}"`, output);
 		}
 		return;
 	}
@@ -618,11 +651,14 @@ export function deleteVariable(
 	variableName: string,
 	output: (message: string) => void
 ) {
-	if (vars.has(variableName)) {
-		vars.delete(variableName);
-	} else {
-		ThrowError(`Variable "${variableName}" does not exist.`, output);
+	for (const scope of scopes.slice().reverse()) {
+		if (scope.has(variableName)) {
+			scope.delete(variableName);
+			return; // Variable found and deleted
+		}
 	}
+
+	ThrowError(`Variable "${variableName}" does not exist.`, output);
 }
 
 // INPUT x
@@ -681,7 +717,7 @@ export function finishHandleInput(output: (message: string) => void) {
 		deleteVariable(inputVariableName, output);
 	}
 
-	assignVariable(inputVariableName, finalInput, inputType, output);
+	assignVariable(inputVariableName, finalInput, output);
 
 	inputVariableName = undefined;
 

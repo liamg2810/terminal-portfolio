@@ -1,7 +1,13 @@
 <script lang="ts">
+	import { startUptimeTracker } from "$lib/uptime";
+	import { onMount } from "svelte";
 	import "../app.css";
 
 	let { children } = $props();
+
+	onMount(() => {
+		startUptimeTracker();
+	});
 </script>
 
 {@render children()}

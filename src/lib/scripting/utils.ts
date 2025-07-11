@@ -1,6 +1,10 @@
 import { terminalState } from "$lib/terminal/terminal.svelte";
 import { currentLine, lines } from "./scripting";
 
+export async function delay(ms: number): Promise<void> {
+	return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
 export function ThrowError(message: string, output: (message: string) => void) {
 	output(`Error on line ${currentLine}: ${message}`);
 	terminalState.executingScript = false;
@@ -119,6 +123,31 @@ export function FindPairedNext(lineNumber: number): number | null {
 	}
 
 	return null; // No paired next found
+}
+
+export function FindPairedEndDef(lineNumber: number): number | null {
+	let depth = 0;
+
+	for (
+		let i = lineNumber + 1;
+		i <= Math.max(...Array.from(lines.keys()));
+		i++
+	) {
+		if (!lines.has(i)) continue;
+
+		const line = lines.get(i);
+		if (!line) continue;
+
+		if (line.trim().startsWith("def")) {
+			depth++;
+		} else if (line.trim().startsWith("enddef")) {
+			if (depth === 0) {
+				return i;
+			}
+			depth--;
+		}
+	}
+	return null; // No paired enddef found
 }
 
 export function findNextLineNumber(startLine: number): number | null {
