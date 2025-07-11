@@ -1,0 +1,1 @@
+import"../chunks/CWj6FrbW.js";import"../chunks/6VMXeIIO.js";import{f as a,s as i,a as n,b as e,n as s}from"../chunks/DPLFGynG.js";import{d as c}from"../chunks/CncUDn7n.js";var m=()=>{window.history.back()},p=a("Oopsie you shouldn't be here! <button>Back</button>",1);function u(t){s();var o=p(),r=i(n(o));r.__click=[m],e(t,o)}c(["click"]);export{u as component};
