@@ -1,0 +1,1 @@
+import"../chunks/CWj6FrbW.js";import{f as t,b as e,c as i,r as p}from"../chunks/DPLFGynG.js";import{s as n}from"../chunks/CH_KY5Um.js";var m=t('<div class="h-screen pb-10"><!></div>');function f(o,a){var r=m(),s=i(r);n(s,()=>a.children),p(r),e(o,r)}export{f as component};

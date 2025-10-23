@@ -1,0 +1,34 @@
+{
+	"/(term)": [
+		"src/routes/+layout.ts",
+		"src/routes/+layout.ts"
+	],
+	"/": [
+		"src/routes/+layout.ts"
+	],
+	"/docs": [
+		"src/routes/+layout.ts",
+		"src/routes/+layout.ts"
+	],
+	"/docs/if": [
+		"src/routes/+layout.ts"
+	],
+	"/docs/input": [
+		"src/routes/+layout.ts"
+	],
+	"/docs/intro": [
+		"src/routes/+layout.ts"
+	],
+	"/docs/loops": [
+		"src/routes/+layout.ts"
+	],
+	"/docs/variables": [
+		"src/routes/+layout.ts"
+	],
+	"/docs/variables/builtins": [
+		"src/routes/+layout.ts"
+	],
+	"/docs/variables/mutating": [
+		"src/routes/+layout.ts"
+	]
+}
